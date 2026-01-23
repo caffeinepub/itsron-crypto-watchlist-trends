@@ -1,2 +1,8 @@
-# itsron-crypto-watchlist-trends
-Exported from Caffeine project: itsron crypto watchlist trends
+## itsron crypto watchlist trends
+
+To run app build and run docker image:
+
+```
+docker build -t app .
+docker run -it --network host app
+```
