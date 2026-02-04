@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ForecastChart from './ForecastChart';
@@ -10,6 +11,12 @@ interface CryptoDetailDialogProps {
 }
 
 export default function CryptoDetailDialog({ symbol, open, onOpenChange }: CryptoDetailDialogProps) {
+  // Per-dialog-session forecast settings state
+  const [movingAveragePeriod, setMovingAveragePeriod] = useState(7);
+  const [forecastHorizon, setForecastHorizon] = useState(5);
+
+  if (!open) return null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -24,11 +31,21 @@ export default function CryptoDetailDialog({ symbol, open, onOpenChange }: Crypt
           </TabsList>
 
           <TabsContent value="chart" className="space-y-4">
-            <ForecastChart symbol={symbol} />
+            <ForecastChart 
+              symbol={symbol}
+              movingAveragePeriod={movingAveragePeriod}
+              forecastHorizon={forecastHorizon}
+            />
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-4">
-            <ForecastSettingsPanel symbol={symbol} />
+            <ForecastSettingsPanel 
+              symbol={symbol}
+              movingAveragePeriod={movingAveragePeriod}
+              forecastHorizon={forecastHorizon}
+              onMovingAveragePeriodChange={setMovingAveragePeriod}
+              onForecastHorizonChange={setForecastHorizon}
+            />
           </TabsContent>
         </Tabs>
       </DialogContent>

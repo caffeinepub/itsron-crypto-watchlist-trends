@@ -1,0 +1,374 @@
+{
+  "schemaVersion": "1.0.0",
+  "projectStateVersion": 3,
+  "summary": "ItsRon Analysis and Predictions is an Internet Computer (ICP) dapp with a React + TypeScript SPA frontend and a Motoko backend canister. It targets multi-user usage with a single permanent admin, providing Internet Identity authentication, role-based access, per-user profile + watchlist storage, live market data via IC HTTPS outcalls (CoinGecko as primary), an analysis/forecast view, alert settings, and an in-app Backend Tester panel for diagnostics and admin commands. Current work is focused on stabilizing auth/actor initialization, admin bootstrapping, symbol directory loading, and replacing mock/stubbed market-data parsing with real API-backed results.",
+  "existing_features": [
+    {
+      "id": "IF-1",
+      "title": "Internet Identity authentication provider",
+      "synonyms": [
+        "InternetIdentityProvider",
+        "useInternetIdentity",
+        "AuthClient"
+      ],
+      "description": "Provides a React context over Internet Identity login/logout, restores an authenticated identity on reload, and exposes detailed login state flags (initializing, logging-in, success, error).",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-2",
+      "title": "Themeable UI design system",
+      "synonyms": [
+        "Tailwind CSS",
+        "shadcn/ui",
+        "next-themes",
+        "OKLCH tokens"
+      ],
+      "description": "Implements a reusable component library and consistent styling using Tailwind + shadcn/ui, with system/light/dark themes driven by CSS-variable color tokens.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-3",
+      "title": "Landing page login prompt",
+      "synonyms": [
+        "LoginPrompt",
+        "marketing page"
+      ],
+      "description": "Shows a feature-focused landing page for unauthenticated users and provides a single call-to-action to initiate Internet Identity login.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-4",
+      "title": "Backend actor initialization per principal with auth bootstrap",
+      "synonyms": [
+        "useActor",
+        "createActorWithConfig",
+        "_initializeAccessControlWithSecret"
+      ],
+      "description": "Creates an anonymous or authenticated canister actor depending on the current identity, and (when authenticated) calls the backend authorization bootstrap method using a secret token from the URL hash/session.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-5",
+      "title": "React Query data-access layer for backend API",
+      "synonyms": [
+        "useQueries",
+        "TanStack Query hooks"
+      ],
+      "description": "Defines query/mutation hooks for user profile, role/admin checks, registration, valid symbols, watchlist CRUD, market data polling, forecast method, and per-symbol alert settings with cache invalidation patterns.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-6",
+      "title": "Role-based authorization (admin/user/guest) in Motoko",
+      "synonyms": [
+        "AccessControl",
+        "MixinAuthorization",
+        "CAFFEINE_ADMIN_TOKEN"
+      ],
+      "description": "Implements canister-side roles and permission checks. Admin bootstrap is performed via an env-provided token matched against a user-provided secret, and exposes role query/admin checks to clients.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-7",
+      "title": "Permanent operator admin binding (one-time)",
+      "synonyms": [
+        "initializePermanentAdmin",
+        "permanentAdmin"
+      ],
+      "description": "Adds a backend entrypoint to bind the current authenticated caller Principal as the permanent admin exactly once; subsequent calls by other principals trap, while the bound principal remains admin (subject to state persistence limitations).",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-8",
+      "title": "User profile storage and onboarding modal",
+      "synonyms": [
+        "UserProfile",
+        "getCallerUserProfile",
+        "saveCallerUserProfile",
+        "ProfileSetupModal"
+      ],
+      "description": "Stores a per-principal user profile (name, lastActive) in the canister. Frontend detects missing profile and prompts the user to complete setup via a modal form.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-9",
+      "title": "Valid cryptocurrency symbol directory (admin load + user query + debug)",
+      "synonyms": [
+        "loadValidCryptoSymbols",
+        "getValidSymbols",
+        "debugValidSymbols",
+        "debugSymbolCount",
+        "debugCheckSymbol"
+      ],
+      "description": "Backend maintains a map of display symbols to CoinGecko ids, supports admin loading/refresh, user query for populating UI selects, and admin debug utilities for symbol inspection.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-10",
+      "title": "Per-user watchlist storage and CRUD",
+      "synonyms": [
+        "getWatchlist",
+        "addCryptoToWatchlist",
+        "removeCryptoFromWatchlist",
+        "UserWatchlist"
+      ],
+      "description": "Stores a per-user watchlist in the canister, validates added symbols against the validSymbols map, and supports listing, adding, and removing symbols.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-11",
+      "title": "Watchlist management UI",
+      "synonyms": [
+        "WatchlistManager",
+        "AddCryptoDialog"
+      ],
+      "description": "Frontend UI to view a user’s watchlist, add symbols via a dropdown populated from valid symbols (with loading states), and remove symbols with confirmation and toast feedback.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-12",
+      "title": "Live market data polling with authorization-aware UX",
+      "synonyms": [
+        "getLiveMarketData",
+        "CryptoCard",
+        "useGetLiveMarketData"
+      ],
+      "description": "Frontend polls backend for live market metrics per symbol (price/change/market cap) and renders explicit UI states for unauthorized access, API/null-data failure, and general errors (with retry).",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-13",
+      "title": "IC HTTPS outcalls abstraction for CoinGecko requests",
+      "synonyms": [
+        "http_request",
+        "OutCall.httpGetRequest",
+        "transform"
+      ],
+      "description": "Backend module wraps the IC management canister http_request API for GET/POST requests, applies a transform function that strips response headers, and decodes UTF-8 response bodies.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-14",
+      "title": "Dashboard with popular coins and watchlist live ticks",
+      "synonyms": [
+        "Dashboard",
+        "WatchlistPriceTicks",
+        "popular cryptos grid"
+      ],
+      "description": "Dashboard page shows watchlist management, a live-updating watchlist ticker list, and a grid of popular cryptocurrencies rendered via overview cards.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-15",
+      "title": "Analysis dialog with forecast chart and settings tabs",
+      "synonyms": [
+        "CryptoDetailDialog",
+        "Tabs"
+      ],
+      "description": "Provides a per-symbol modal dialog containing a forecast chart and a forecast settings panel. Settings are managed per dialog session and update the chart instantly.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-16",
+      "title": "Interactive statistical forecast chart (demo historical data)",
+      "synonyms": [
+        "ForecastChart",
+        "Recharts",
+        "linear regression",
+        "moving average",
+        "exponential smoothing"
+      ],
+      "description": "Renders a multi-series line chart over generated demo historical data, computes regression/MA/exponential smoothing series, shows a custom tooltip with predicted % change, and includes an optional live-price reference line when available.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-17",
+      "title": "Forecast chart “BTC Analysis” clean styling",
+      "synonyms": [
+        "monotone curves",
+        "strokeWidth=2",
+        "no markers",
+        "subtle grid"
+      ],
+      "description": "Applies a clean chart style: monotone lines with strokeWidth=2, neon green historical series, dashed electric blue regression series, soft orange moving average series, dot={false} markers removed, and a very subtle CartesianGrid (opacity 0.05).",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-18",
+      "title": "Per-symbol forecast method and alert settings persistence",
+      "synonyms": [
+        "getForecastMethod",
+        "setForecastMethod",
+        "getAlertSettings",
+        "setAlertSettings"
+      ],
+      "description": "Backend stores per-user per-symbol forecast method selection and alert settings (enabled + thresholdPercent) as part of watchlist state; frontend exposes these via React Query hooks and tester commands.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-19",
+      "title": "Backend price alerts module",
+      "synonyms": [
+        "createOrUpdatePriceAlert",
+        "getAlerts",
+        "disableAlert",
+        "deleteAlert",
+        "getActiveAlerts"
+      ],
+      "description": "Implements per-user price alerts in the backend with validation against validSymbols, duplicate prevention, listing and retrieval, disable/delete operations, and filtering to active alerts.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-20",
+      "title": "Backend Tester terminal UI with limited-mode locking",
+      "synonyms": [
+        "BackendTesterPage",
+        "SimulatedBashPanel",
+        "backendTesterCommands"
+      ],
+      "description": "In-app terminal-like console that executes categorized backend commands, logs output history with running/success/error states, supports minimize/maximize, implements reconnection attempts with exponential backoff, and disables admin-only commands with lock/tooltips when in limited mode.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-21",
+      "title": "Connection bootstrapper with timeout and diagnostics",
+      "synonyms": [
+        "ConnectionBootstrapper",
+        "ConnectionDetails",
+        "useActorEnhanced"
+      ],
+      "description": "Gates the authenticated app behind actor initialization, shows elapsed-time loading UI, fails after a 45s timeout, offers recovery actions (retry/re-auth/refresh), and exposes a collapsible/copyable diagnostics summary.",
+      "reqIds": [],
+      "version": 1
+    },
+    {
+      "id": "IF-22",
+      "title": "URL secret handling for bootstrap tokens",
+      "synonyms": [
+        "urlParams",
+        "getSecretParameter",
+        "sessionStorage persistence"
+      ],
+      "description": "Utilities support reading sensitive parameters from the URL hash fragment, persisting them into sessionStorage, and removing them from the URL to reduce accidental leakage via history/referrer.",
+      "reqIds": [],
+      "version": 1
+    }
+  ],
+  "new_feature_requests": [
+    {
+      "id": "AR-1",
+      "summary": "Admin bootstrap + permanence: initializeFirstAdmin plus emergencyGrantAdmin backdoor; ensure admin also has user permissions; add getAdminList/debug tools in Backend Tester",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-2",
+      "summary": "Fix CoinGecko integration end-to-end: load full symbol directory from /coins/list, map symbol->CoinGecko id, fetch live prices by id, and stop returning mock/placeholder prices",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "IC HTTPS outcall hardening: implement transform stripping dynamic headers for consensus, explicitly attach sufficient cycles per request, and add server-side caching (e.g., 60s) to avoid 429 rate limits during testing",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Backend Tester UX improvements: ensure tester entry always available to admin, add complete test/diagnostic command set, make output scrollable, and support maximize/minimize + open in new tab with session carryover",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Auth/actor initialization stabilization: prevent anonymous principal backend calls; wait for II rehydration before actor creation/routes; add retry/re-auth flows and heartbeat to prevent reconnect loops",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Analysis chart polish + controls: monotone lines, neon green/electric blue dashed/soft orange palette, hide markers, subtle grid, custom tooltip with % change; add forecast settings panel (MA period + horizon) with instant recalculation",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Alerts + watchlist ticks: backend price alert module (set/list/disable/delete) and dashboard watchlist section that shows real-time price ticks without opening analysis",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "In `backend/main.mo`, add a public canister method named `emergencyGrantAdmin(user : Principal) : async ()` (shared) that enables granting permanent admin + user access to the specified principal so the user can run `dfx canister call itsron_crypto_backend emergencyGrantAdmin '(principal \"PRINCIPAL_FROM_STEP_1\")'` successfully.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Ensure the emergency admin grant is *permanent* in the same sense as the app’s permanent admin concept: after `emergencyGrantAdmin` is used to bootstrap the operator, the backend must treat that principal as the single permanent admin and prevent re-binding permanent admin to a different principal via this emergency path.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-10",
+      "summary": "Add a public canister method named `getAdminList` that returns the admin principal list, so the user can run `dfx canister call itsron_crypto_backend getAdminList` exactly as written.",
+      "reqIds": [
+        "REQ-3"
+      ],
+      "status": "pending"
+    }
+  ],
+  "architectural_notes": [
+    "Frontend is a React SPA using TypeScript, Tailwind CSS, shadcn/ui components, and lucide-react icons; next-themes controls light/dark mode via CSS variables (OKLCH palette).",
+    "Backend communication is centralized in a TanStack React Query hook layer (queries + mutations) with targeted cache invalidation and periodic polling (live market data refetch every 60s).",
+    "Authentication is via Internet Identity using @dfinity/auth-client, wrapped in a React context (useInternetIdentity) that restores identity from storage and exposes login/logout status flags.",
+    "Backend actor creation is encapsulated in a hook (useActor) keyed by principal; authenticated actor initialization calls a Motoko bootstrap entrypoint (_initializeAccessControlWithSecret) using a secret token read from the URL hash/session.",
+    "Sensitive bootstrap secrets are read from the URL hash (not query params), persisted in sessionStorage, and removed from the URL to reduce leakage (urlParams utilities).",
+    "Motoko backend uses an AccessControl module + mixin (MixinAuthorization) to manage roles; many entrypoints guard access by checking role/permissions.",
+    "Backend state is held in in-memory Map structures keyed by Principal and/or symbol (profiles, watchlists, valid symbols map, alerts).",
+    "IC HTTPS outcalls are implemented through the management canister http_request API with a transform function to strip headers and fixed cycle allocation per request.",
+    "App navigation is implemented via manual history.pushState/popstate handling rather than a dedicated routing library.",
+    "A diagnostics-first UX exists: ConnectionBootstrapper (timeout + recovery actions), ConnectionDetails (copyable debug summary), and an in-app Backend Tester terminal with categorized command registry and limited-mode locking."
+  ],
+  "known_issues": [
+    "Backend CoinGecko parsing is unimplemented: parseCoinMarketData() always returns null, so fetchCoinGeckoData/getLiveMarketData typically return null even when HTTP outcalls succeed.",
+    "Symbol directory parsing is unimplemented: parseCoins() returns an empty list, so loadValidCryptoSymbols() effectively loads only the hardcoded seed mappings (BTC/ETH).",
+    "disableAllAlerts() is logically incorrect: it clears the user’s alerts but then re-adds the prior alert map, so alerts are not actually deleted.",
+    "Watchlist add operation does not prevent duplicate symbols; addCryptoToWatchlist appends blindly.",
+    "AccessControl requires _initializeAccessControlWithSecret to be called before many backend methods; otherwise AccessControl.getUserRole traps with “User is not registered”.",
+    "Register/role upgrade paths appear inconsistent: safeAssignRole ultimately calls AccessControl.assignRole which is admin-only, so self-registration from a true “guest/unregistered” state would trap (currently masked by actor bootstrap initialization).",
+    "Two QueryClientProvider instances exist (frontend/src/main.tsx and frontend/src/App.tsx), which can split caches and cause confusing query invalidation/refetch behavior.",
+    "Several placeholder/empty files exist (PriceEntryManager.tsx, ConfigErrorBoundary.tsx, ConnectionRecoveryDialog.tsx, useConnectionRecovery.ts), indicating incomplete or dead code paths.",
+    "Backend state (including permanentAdmin, profiles, watchlists, alerts, symbol mappings) is not stored in stable variables, risking data loss across canister upgrades despite a migration shim for older admin fields.",
+    "Admin diagnostics fields in backend (adminInitialized/adminInitializationErrorMessage) are present but not meaningfully set/used, which can lead to misleading diagnostics."
+  ],
+  "isFixRequest": true,
+  "gameProjectType": "none",
+  "projectName": "ItsRon Analysis and Predictions",
+  "clarification_mode": "instant",
+  "clarification_rounds": 0
+}

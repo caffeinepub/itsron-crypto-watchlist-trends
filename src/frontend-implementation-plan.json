@@ -1,0 +1,6 @@
+{
+  "kind": "implementation_plan",
+  "version": "1.0",
+  "title": "Frontend plan: No changes required for backend-only admin bootstrap methods",
+  "requirements": []
+}

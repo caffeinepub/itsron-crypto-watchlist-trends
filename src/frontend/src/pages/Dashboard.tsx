@@ -1,13 +1,14 @@
-import { useState } from 'react';
-import { Settings, TrendingUp } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { TrendingUp, List } from 'lucide-react';
 import CryptoCard from '../components/CryptoCard';
-import SimulatedBashPanel from '../components/SimulatedBashPanel';
+import WatchlistManager from '../components/WatchlistManager';
+import WatchlistPriceTicks from '../components/WatchlistPriceTicks';
+import BackendTesterEntryPoint from '../components/BackendTesterEntryPoint';
 
-export default function Dashboard() {
-  const [testerOpen, setTesterOpen] = useState(false);
+interface DashboardProps {
+  onNavigateToTester?: () => void;
+}
 
-  // Hardcoded list of popular cryptocurrencies to display
+export default function Dashboard({ onNavigateToTester }: DashboardProps) {
   const popularCryptos = ['BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOGE'];
 
   return (
@@ -22,20 +23,25 @@ export default function Dashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setTesterOpen(!testerOpen)}
-            className="shadow-sm"
-          >
-            <Settings className="mr-2 h-4 w-4" />
-            Backend Tester
-          </Button>
+          {onNavigateToTester && (
+            <BackendTesterEntryPoint onNavigate={onNavigateToTester} variant="button" />
+          )}
         </div>
       </div>
 
-      {/* Backend Tester Panel */}
-      {testerOpen && <SimulatedBashPanel onClose={() => setTesterOpen(false)} />}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
+          <div className="flex items-center gap-2">
+            <List className="h-5 w-5 text-primary" />
+            <h2 className="text-xl font-semibold">My Watchlist</h2>
+          </div>
+          <WatchlistManager />
+        </div>
+
+        <div className="space-y-6">
+          <WatchlistPriceTicks />
+        </div>
+      </div>
 
       <div className="space-y-6">
         <div className="flex items-center gap-2">

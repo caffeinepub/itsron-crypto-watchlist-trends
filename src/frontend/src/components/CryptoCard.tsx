@@ -1,12 +1,14 @@
 import { useState } from 'react';
-import { TrendingUp, TrendingDown, BarChart3, AlertCircle, Loader2, Info } from 'lucide-react';
+import { TrendingUp, TrendingDown, BarChart3, AlertCircle, Loader2, Info, UserPlus } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { useGetLiveMarketData } from '../hooks/useQueries';
+import { useGetLiveMarketData, useRegisterSelfAsUser } from '../hooks/useQueries';
 import CryptoDetailDialog from './CryptoDetailDialog';
+import type { LiveMarketResponse } from '../backend';
+import { toast } from 'sonner';
 
 interface CryptoCardProps {
   symbol: string;
@@ -14,11 +16,15 @@ interface CryptoCardProps {
 
 export default function CryptoCard({ symbol }: CryptoCardProps) {
   const [detailOpen, setDetailOpen] = useState(false);
-  const { data: liveData, isLoading: liveDataLoading, error: liveDataError } = useGetLiveMarketData(symbol);
+  
+  const { data: liveData, isLoading: liveDataLoading, error: liveDataError, refetch } = useGetLiveMarketData(symbol);
+  const registerMutation = useRegisterSelfAsUser();
 
-  const currentPrice = liveData?.price;
-  const priceChange24h = liveData?.change24h;
-  const marketCap = liveData?.marketCap;
+  const typedLiveData = liveData as LiveMarketResponse | null | undefined;
+
+  const currentPrice = typedLiveData?.price;
+  const priceChange24h = typedLiveData?.change24h;
+  const marketCap = typedLiveData?.marketCap;
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -36,12 +42,44 @@ export default function CryptoCard({ symbol }: CryptoCardProps) {
     return `$${value.toFixed(0)}`;
   };
 
-  // Check if data is null (backend integration pending)
-  const isDataUnavailable = !liveDataLoading && !liveDataError && liveData === null;
+  // Check if error is authorization-related
+  const isUnauthorizedError = liveDataError && 
+    (liveDataError.message?.includes('Unauthorized') || 
+     liveDataError.message?.includes('Only users can access market data'));
+
+  // Check if data is null (API failure or rate limit)
+  const isApiFailure = !liveDataLoading && !liveDataError && liveData === null;
+
+  const handleCardClick = () => {
+    setDetailOpen(true);
+  };
+
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDetailOpen(true);
+  };
+
+  const handleRegisterFromCard = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await registerMutation.mutateAsync();
+      toast.success('Successfully registered! Refreshing market data...');
+      await refetch();
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Failed to register';
+      toast.error(`Registration failed: ${errorMessage}`);
+    }
+  };
+
+  const handleRetry = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toast.info('Retrying...');
+    await refetch();
+  };
 
   return (
     <>
-      <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={() => setDetailOpen(true)}>
+      <Card className="hover:shadow-lg transition-shadow cursor-pointer" onClick={handleCardClick}>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex-1">
@@ -51,7 +89,7 @@ export default function CryptoCard({ symbol }: CryptoCardProps) {
                   <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                 )}
               </div>
-              <CardDescription>Live market data from CoinGecko API</CardDescription>
+              <CardDescription>Live market data</CardDescription>
             </div>
             {liveDataLoading ? (
               <Skeleton className="h-6 w-16" />
@@ -68,32 +106,63 @@ export default function CryptoCard({ symbol }: CryptoCardProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isDataUnavailable ? (
+          {isUnauthorizedError ? (
             <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
-              <Info className="h-4 w-4 text-amber-500" />
-              <AlertTitle className="text-amber-700 dark:text-amber-400">Backend CoinGecko Integration Required</AlertTitle>
-              <AlertDescription className="text-sm">
-                <div className="space-y-1">
-                  <p>Live data for <strong>{symbol}</strong> requires backend implementation.</p>
-                  <p className="text-xs text-muted-foreground">
-                    Backend needs HTTP outcalls to CoinGecko's simple/price endpoint with JSON parsing to extract:
-                  </p>
-                  <ul className="text-xs text-muted-foreground list-disc list-inside ml-2 space-y-0.5">
-                    <li><strong>Price:</strong> Parse current price from API response</li>
-                    <li><strong>24h Change:</strong> Extract from price change percentage field</li>
-                    <li><strong>Market Cap:</strong> Get from market cap data field</li>
-                  </ul>
-                  <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mt-2">
-                    Example: CoinGecko GET /api/v3/simple/price endpoint
-                  </p>
-                </div>
+              <AlertCircle className="h-4 w-4 text-amber-500" />
+              <AlertTitle className="text-amber-700 dark:text-amber-400">Registration Required</AlertTitle>
+              <AlertDescription className="text-sm space-y-3">
+                <p>You must register as a user to access market data for {symbol}.</p>
+                <Button
+                  onClick={handleRegisterFromCard}
+                  disabled={registerMutation.isPending}
+                  size="sm"
+                  variant="default"
+                  className="w-full bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                >
+                  {registerMutation.isPending ? (
+                    <>
+                      <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Registering...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Register Now
+                    </>
+                  )}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          ) : isApiFailure ? (
+            <Alert variant="default" className="border-red-500/50 bg-red-500/10">
+              <AlertCircle className="h-4 w-4 text-red-500" />
+              <AlertTitle className="text-red-700 dark:text-red-400">API Error</AlertTitle>
+              <AlertDescription className="text-sm space-y-3">
+                <p>Unable to fetch live data for {symbol}. This may be due to API rate limits or network issues.</p>
+                <Button
+                  onClick={handleRetry}
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                >
+                  Retry
+                </Button>
               </AlertDescription>
             </Alert>
           ) : liveDataError ? (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription className="text-sm">
-                {liveDataError.message || 'Failed to load market data'}
+              <AlertTitle>Error</AlertTitle>
+              <AlertDescription className="text-sm space-y-3">
+                <p>{liveDataError.message || 'Failed to load market data'}</p>
+                <Button
+                  onClick={handleRetry}
+                  size="sm"
+                  variant="outline"
+                  className="w-full"
+                >
+                  Retry
+                </Button>
               </AlertDescription>
             </Alert>
           ) : (
@@ -123,15 +192,14 @@ export default function CryptoCard({ symbol }: CryptoCardProps) {
             </>
           )}
 
-          <div className="pt-2 border-t">
-            <Button className="w-full" variant="outline" onClick={(e) => {
-              e.stopPropagation();
-              setDetailOpen(true);
-            }}>
-              <BarChart3 className="mr-2 h-4 w-4" />
-              View Analysis & Forecast
-            </Button>
-          </div>
+          {!isUnauthorizedError && (
+            <div className="pt-2 border-t">
+              <Button className="w-full" variant="outline" onClick={handleButtonClick}>
+                <BarChart3 className="mr-2 h-4 w-4" />
+                View Analysis & Forecast
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 

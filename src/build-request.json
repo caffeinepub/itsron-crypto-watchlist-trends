@@ -1,0 +1,71 @@
+{
+  "kind": "build_request",
+  "title": "Add emergency admin grant entrypoint and getAdminList canister method",
+  "priority": "normal",
+  "requirements": [
+    {
+      "id": "REQ-1",
+      "text": "In `backend/main.mo`, add a public canister method named `emergencyGrantAdmin(user : Principal) : async ()` (shared) that enables granting permanent admin + user access to the specified principal so the user can run `dfx canister call itsron_crypto_backend emergencyGrantAdmin '(principal \"PRINCIPAL_FROM_STEP_1\")'` successfully.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "dfx canister call itsron_crypto_backend emergencyGrantAdmin '(principal \"PRINCIPAL_FROM_STEP_1\")'\nIf that function doesn't exist, add this code to my main.mo file:\nmotokopublic shared func emergencyGrantAdmin(user : Principal) : async () {\n  AccessControl.grantPermission(accessControlState, user, #admin);\n  AccessControl.grantPermission(accessControlState, user, #user);\n};"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Calling `dfx canister call itsron_crypto_backend emergencyGrantAdmin '(principal \"<some-principal>\")'` succeeds (does not trap) when used for the intended bootstrap flow.",
+        "After calling `emergencyGrantAdmin` for a principal, that principal is recognized by backend authorization checks as both admin and user for subsequent calls."
+      ]
+    },
+    {
+      "id": "REQ-2",
+      "text": "Ensure the emergency admin grant is *permanent* in the same sense as the app’s permanent admin concept: after `emergencyGrantAdmin` is used to bootstrap the operator, the backend must treat that principal as the single permanent admin and prevent re-binding permanent admin to a different principal via this emergency path.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "This should give me permanent admin+user access so I can see real-time pricing."
+        ]
+      },
+      "acceptanceCriteria": [
+        "If a permanent admin has already been set, `emergencyGrantAdmin` cannot be used to make a different principal the permanent admin.",
+        "After bootstrapping, the granted principal retains admin privileges after an upgrade (consistent with the permanent admin behavior)."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Add a public canister method named `getAdminList` that returns the admin principal list, so the user can run `dfx canister call itsron_crypto_backend getAdminList` exactly as written.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "Verify I'm now permanently an admin:\n\nbashdfx canister call itsron_crypto_backend getAdminList"
+        ]
+      },
+      "acceptanceCriteria": [
+        "`dfx canister call itsron_crypto_backend getAdminList` returns an array of principals that includes the bootstrapped principal after `emergencyGrantAdmin` is called.",
+        "`getAdminList` is protected so only an admin can call it successfully (non-admin callers should be rejected)."
+      ]
+    }
+  ],
+  "constraints": [
+    "Backend must remain a single-actor Motoko canister; keep all logic in `backend/main.mo`.",
+    "Use English for any user-facing text added as part of these changes.",
+    "Do not edit any frontend files under `frontend/immutablePaths`."
+  ],
+  "nonGoals": [
+    "Do not redesign or expand the frontend UI/UX for admin management beyond what is required to support the requested `dfx` calls.",
+    "Do not implement additional CoinGecko parsing/fetch fixes as part of this request (only ensure the admin bootstrapping and admin-list verification functions exist and work)."
+  ],
+  "imageRequirements": {
+    "required": [],
+    "edits": []
+  }
+}

@@ -14,29 +14,66 @@ export const UserRole = IDL.Variant({
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
+export const AlertDirection = IDL.Variant({
+  'above' : IDL.Null,
+  'below' : IDL.Null,
+});
+export const AlertInput = IDL.Record({
+  'direction' : AlertDirection,
+  'targetPrice' : IDL.Float64,
+  'symbol' : CryptoSymbol,
+});
+export const DisplaySymbol = IDL.Text;
+export const LiveMarketResponse = IDL.Record({
+  'change24h' : IDL.Float64,
+  'marketCap' : IDL.Float64,
+  'price' : IDL.Float64,
+});
+export const Time = IDL.Int;
+export const PriceAlert = IDL.Record({
+  'alertType' : IDL.Text,
+  'direction' : AlertDirection,
+  'createdAt' : Time,
+  'targetPrice' : IDL.Float64,
+  'isActive' : IDL.Bool,
+  'symbol' : CryptoSymbol,
+});
 export const AlertSettings = IDL.Record({
   'enabled' : IDL.Bool,
   'thresholdPercent' : IDL.Float64,
 });
-export const Time = IDL.Int;
 export const UserProfile = IDL.Record({
   'name' : IDL.Text,
   'lastActive' : Time,
+});
+export const CommandCategory = IDL.Variant({
+  'admin' : IDL.Null,
+  'data' : IDL.Null,
+  'test' : IDL.Null,
+  'user' : IDL.Null,
+});
+export const CommandEntry = IDL.Record({
+  'description' : IDL.Text,
+  'command' : IDL.Text,
+  'category' : CommandCategory,
 });
 export const ForecastMethod = IDL.Variant({
   'movingAverage' : IDL.Null,
   'exponentialSmoothing' : IDL.Null,
   'linearRegression' : IDL.Null,
 });
-export const LiveMarketResponse = IDL.Record({
-  'change24h' : IDL.Float64,
-  'marketCap' : IDL.Float64,
-  'price' : IDL.Float64,
+export const Role = IDL.Variant({
+  'admin' : IDL.Null,
+  'user' : IDL.Null,
+  'guest' : IDL.Null,
 });
-export const DisplaySymbol = IDL.Text;
 export const SymbolPair = IDL.Record({
   'network' : CryptoSymbol,
   'display' : DisplaySymbol,
+});
+export const InitializePermanentAdminResult = IDL.Record({
+  'verifiedCaller' : IDL.Principal,
+  'permanentAdminSet' : IDL.Bool,
 });
 export const http_header = IDL.Record({
   'value' : IDL.Text,
@@ -61,26 +98,49 @@ export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'addCryptoToWatchlist' : IDL.Func([CryptoSymbol], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-  'debugCheckSymbol' : IDL.Func([IDL.Text], [IDL.Text], ['query']),
-  'debugFetchRawTicker' : IDL.Func([], [IDL.Text], []),
+  'checkAndInitializeUser' : IDL.Func([], [IDL.Bool], []),
+  'createOrUpdatePriceAlert' : IDL.Func([AlertInput], [], []),
+  'debugCheckSymbol' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
   'debugGetAdminList' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
-  'debugParseTicker' : IDL.Func([IDL.Text], [IDL.Text], []),
-  'debugResetSystem' : IDL.Func([], [IDL.Text], ['query']),
   'debugSymbolCount' : IDL.Func([], [IDL.Nat], ['query']),
-  'debugTestCoinGecko' : IDL.Func([], [IDL.Text], []),
   'debugValidSymbols' : IDL.Func(
       [],
-      [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))],
+      [IDL.Vec(IDL.Tuple(DisplaySymbol, CryptoSymbol))],
       ['query'],
     ),
-  'fetchCoinGeckoData' : IDL.Func([CryptoSymbol], [IDL.Opt(IDL.Text)], []),
+  'deleteAlert' : IDL.Func([IDL.Nat], [], []),
+  'disableAlert' : IDL.Func([IDL.Nat], [], []),
+  'disableAllAlerts' : IDL.Func([], [], []),
+  'emergencyGrantAdmin' : IDL.Func([IDL.Principal], [], []),
+  'fetchCoinGeckoData' : IDL.Func(
+      [CryptoSymbol],
+      [IDL.Opt(LiveMarketResponse)],
+      [],
+    ),
+  'getActiveAlerts' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Tuple(IDL.Nat, PriceAlert))],
+      ['query'],
+    ),
+  'getAdminInitializationErrorMessage' : IDL.Func(
+      [],
+      [IDL.Opt(IDL.Text)],
+      ['query'],
+    ),
+  'getAdminList' : IDL.Func([], [IDL.Vec(IDL.Principal)], []),
   'getAlertSettings' : IDL.Func(
       [CryptoSymbol],
       [IDL.Opt(AlertSettings)],
       ['query'],
     ),
+  'getAlerts' : IDL.Func(
+      [],
+      [IDL.Vec(IDL.Tuple(IDL.Nat, PriceAlert))],
+      ['query'],
+    ),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getCommandRegistry' : IDL.Func([], [IDL.Vec(CommandEntry)], ['query']),
   'getForecastMethod' : IDL.Func(
       [CryptoSymbol],
       [IDL.Opt(ForecastMethod)],
@@ -89,8 +149,10 @@ export const idlService = IDL.Service({
   'getLiveMarketData' : IDL.Func(
       [CryptoSymbol],
       [IDL.Opt(LiveMarketResponse)],
-      ['query'],
+      [],
     ),
+  'getRole' : IDL.Func([], [Role], []),
+  'getSingleAlert' : IDL.Func([IDL.Nat], [IDL.Opt(PriceAlert)], ['query']),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
@@ -102,13 +164,30 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getWatchlist' : IDL.Func([], [IDL.Vec(CryptoSymbol)], ['query']),
-  'initializeCryptoSystem' : IDL.Func([], [], []),
+  'grantUserPermission' : IDL.Func([IDL.Principal], [], []),
+  'initializePermanentAdmin' : IDL.Func(
+      [],
+      [InitializePermanentAdminResult],
+      [],
+    ),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'loadValidCryptoSymbols' : IDL.Func([], [], []),
+  'registerSelfAsUser' : IDL.Func([], [], []),
+  'registerWithRole' : IDL.Func([Role], [], []),
   'removeCryptoFromWatchlist' : IDL.Func([CryptoSymbol], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'savePermanentAdmin' : IDL.Func([IDL.Principal], [], []),
   'setAlertSettings' : IDL.Func([CryptoSymbol, AlertSettings], [], []),
   'setForecastMethod' : IDL.Func([CryptoSymbol, ForecastMethod], [], []),
+  'testAPIResponseFormat' : IDL.Func([IDL.Text], [IDL.Bool], []),
+  'testAlertSettings' : IDL.Func([IDL.Text, IDL.Float64], [IDL.Bool], []),
+  'testAllNineSymbols' : IDL.Func([], [IDL.Bool], []),
+  'testBulkSymbolValidation' : IDL.Func([], [IDL.Bool], []),
+  'testForecastMethod' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+  'testHistoricalDataFetch' : IDL.Func([IDL.Text], [IDL.Bool], []),
+  'testSymbolDataIntegrity' : IDL.Func([IDL.Text], [IDL.Bool], []),
+  'testWatchlistAdd' : IDL.Func([IDL.Text], [IDL.Bool], []),
+  'testWatchlistRemove' : IDL.Func([IDL.Text], [IDL.Bool], []),
   'transform' : IDL.Func(
       [TransformationInput],
       [TransformationOutput],
@@ -125,26 +204,63 @@ export const idlFactory = ({ IDL }) => {
     'user' : IDL.Null,
     'guest' : IDL.Null,
   });
-  const AlertSettings = IDL.Record({
-    'enabled' : IDL.Bool,
-    'thresholdPercent' : IDL.Float64,
+  const AlertDirection = IDL.Variant({
+    'above' : IDL.Null,
+    'below' : IDL.Null,
   });
-  const Time = IDL.Int;
-  const UserProfile = IDL.Record({ 'name' : IDL.Text, 'lastActive' : Time });
-  const ForecastMethod = IDL.Variant({
-    'movingAverage' : IDL.Null,
-    'exponentialSmoothing' : IDL.Null,
-    'linearRegression' : IDL.Null,
+  const AlertInput = IDL.Record({
+    'direction' : AlertDirection,
+    'targetPrice' : IDL.Float64,
+    'symbol' : CryptoSymbol,
   });
+  const DisplaySymbol = IDL.Text;
   const LiveMarketResponse = IDL.Record({
     'change24h' : IDL.Float64,
     'marketCap' : IDL.Float64,
     'price' : IDL.Float64,
   });
-  const DisplaySymbol = IDL.Text;
+  const Time = IDL.Int;
+  const PriceAlert = IDL.Record({
+    'alertType' : IDL.Text,
+    'direction' : AlertDirection,
+    'createdAt' : Time,
+    'targetPrice' : IDL.Float64,
+    'isActive' : IDL.Bool,
+    'symbol' : CryptoSymbol,
+  });
+  const AlertSettings = IDL.Record({
+    'enabled' : IDL.Bool,
+    'thresholdPercent' : IDL.Float64,
+  });
+  const UserProfile = IDL.Record({ 'name' : IDL.Text, 'lastActive' : Time });
+  const CommandCategory = IDL.Variant({
+    'admin' : IDL.Null,
+    'data' : IDL.Null,
+    'test' : IDL.Null,
+    'user' : IDL.Null,
+  });
+  const CommandEntry = IDL.Record({
+    'description' : IDL.Text,
+    'command' : IDL.Text,
+    'category' : CommandCategory,
+  });
+  const ForecastMethod = IDL.Variant({
+    'movingAverage' : IDL.Null,
+    'exponentialSmoothing' : IDL.Null,
+    'linearRegression' : IDL.Null,
+  });
+  const Role = IDL.Variant({
+    'admin' : IDL.Null,
+    'user' : IDL.Null,
+    'guest' : IDL.Null,
+  });
   const SymbolPair = IDL.Record({
     'network' : CryptoSymbol,
     'display' : DisplaySymbol,
+  });
+  const InitializePermanentAdminResult = IDL.Record({
+    'verifiedCaller' : IDL.Principal,
+    'permanentAdminSet' : IDL.Bool,
   });
   const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
   const http_request_result = IDL.Record({
@@ -166,26 +282,49 @@ export const idlFactory = ({ IDL }) => {
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'addCryptoToWatchlist' : IDL.Func([CryptoSymbol], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
-    'debugCheckSymbol' : IDL.Func([IDL.Text], [IDL.Text], ['query']),
-    'debugFetchRawTicker' : IDL.Func([], [IDL.Text], []),
+    'checkAndInitializeUser' : IDL.Func([], [IDL.Bool], []),
+    'createOrUpdatePriceAlert' : IDL.Func([AlertInput], [], []),
+    'debugCheckSymbol' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
     'debugGetAdminList' : IDL.Func([], [IDL.Vec(IDL.Principal)], ['query']),
-    'debugParseTicker' : IDL.Func([IDL.Text], [IDL.Text], []),
-    'debugResetSystem' : IDL.Func([], [IDL.Text], ['query']),
     'debugSymbolCount' : IDL.Func([], [IDL.Nat], ['query']),
-    'debugTestCoinGecko' : IDL.Func([], [IDL.Text], []),
     'debugValidSymbols' : IDL.Func(
         [],
-        [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))],
+        [IDL.Vec(IDL.Tuple(DisplaySymbol, CryptoSymbol))],
         ['query'],
       ),
-    'fetchCoinGeckoData' : IDL.Func([CryptoSymbol], [IDL.Opt(IDL.Text)], []),
+    'deleteAlert' : IDL.Func([IDL.Nat], [], []),
+    'disableAlert' : IDL.Func([IDL.Nat], [], []),
+    'disableAllAlerts' : IDL.Func([], [], []),
+    'emergencyGrantAdmin' : IDL.Func([IDL.Principal], [], []),
+    'fetchCoinGeckoData' : IDL.Func(
+        [CryptoSymbol],
+        [IDL.Opt(LiveMarketResponse)],
+        [],
+      ),
+    'getActiveAlerts' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Tuple(IDL.Nat, PriceAlert))],
+        ['query'],
+      ),
+    'getAdminInitializationErrorMessage' : IDL.Func(
+        [],
+        [IDL.Opt(IDL.Text)],
+        ['query'],
+      ),
+    'getAdminList' : IDL.Func([], [IDL.Vec(IDL.Principal)], []),
     'getAlertSettings' : IDL.Func(
         [CryptoSymbol],
         [IDL.Opt(AlertSettings)],
         ['query'],
       ),
+    'getAlerts' : IDL.Func(
+        [],
+        [IDL.Vec(IDL.Tuple(IDL.Nat, PriceAlert))],
+        ['query'],
+      ),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getCommandRegistry' : IDL.Func([], [IDL.Vec(CommandEntry)], ['query']),
     'getForecastMethod' : IDL.Func(
         [CryptoSymbol],
         [IDL.Opt(ForecastMethod)],
@@ -194,8 +333,10 @@ export const idlFactory = ({ IDL }) => {
     'getLiveMarketData' : IDL.Func(
         [CryptoSymbol],
         [IDL.Opt(LiveMarketResponse)],
-        ['query'],
+        [],
       ),
+    'getRole' : IDL.Func([], [Role], []),
+    'getSingleAlert' : IDL.Func([IDL.Nat], [IDL.Opt(PriceAlert)], ['query']),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
@@ -207,13 +348,30 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getWatchlist' : IDL.Func([], [IDL.Vec(CryptoSymbol)], ['query']),
-    'initializeCryptoSystem' : IDL.Func([], [], []),
+    'grantUserPermission' : IDL.Func([IDL.Principal], [], []),
+    'initializePermanentAdmin' : IDL.Func(
+        [],
+        [InitializePermanentAdminResult],
+        [],
+      ),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'loadValidCryptoSymbols' : IDL.Func([], [], []),
+    'registerSelfAsUser' : IDL.Func([], [], []),
+    'registerWithRole' : IDL.Func([Role], [], []),
     'removeCryptoFromWatchlist' : IDL.Func([CryptoSymbol], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'savePermanentAdmin' : IDL.Func([IDL.Principal], [], []),
     'setAlertSettings' : IDL.Func([CryptoSymbol, AlertSettings], [], []),
     'setForecastMethod' : IDL.Func([CryptoSymbol, ForecastMethod], [], []),
+    'testAPIResponseFormat' : IDL.Func([IDL.Text], [IDL.Bool], []),
+    'testAlertSettings' : IDL.Func([IDL.Text, IDL.Float64], [IDL.Bool], []),
+    'testAllNineSymbols' : IDL.Func([], [IDL.Bool], []),
+    'testBulkSymbolValidation' : IDL.Func([], [IDL.Bool], []),
+    'testForecastMethod' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+    'testHistoricalDataFetch' : IDL.Func([IDL.Text], [IDL.Bool], []),
+    'testSymbolDataIntegrity' : IDL.Func([IDL.Text], [IDL.Bool], []),
+    'testWatchlistAdd' : IDL.Func([IDL.Text], [IDL.Bool], []),
+    'testWatchlistRemove' : IDL.Func([IDL.Text], [IDL.Bool], []),
     'transform' : IDL.Func(
         [TransformationInput],
         [TransformationOutput],

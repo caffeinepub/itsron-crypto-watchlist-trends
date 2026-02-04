@@ -89,17 +89,38 @@ export class ExternalBlob {
         return this;
     }
 }
-export interface http_request_result {
-    status: bigint;
-    body: Uint8Array;
-    headers: Array<http_header>;
-}
 export interface TransformationOutput {
     status: bigint;
     body: Uint8Array;
     headers: Array<http_header>;
 }
 export type Time = bigint;
+export interface AlertInput {
+    direction: AlertDirection;
+    targetPrice: number;
+    symbol: CryptoSymbol;
+}
+export interface http_header {
+    value: string;
+    name: string;
+}
+export interface http_request_result {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
+export interface InitializePermanentAdminResult {
+    verifiedCaller: Principal;
+    permanentAdminSet: boolean;
+}
+export interface PriceAlert {
+    alertType: string;
+    direction: AlertDirection;
+    createdAt: Time;
+    targetPrice: number;
+    isActive: boolean;
+    symbol: CryptoSymbol;
+}
 export interface TransformationInput {
     context: Uint8Array;
     response: http_request_result;
@@ -123,9 +144,20 @@ export interface UserProfile {
     name: string;
     lastActive: Time;
 }
-export interface http_header {
-    value: string;
-    name: string;
+export interface CommandEntry {
+    description: string;
+    command: string;
+    category: CommandCategory;
+}
+export enum AlertDirection {
+    above = "above",
+    below = "below"
+}
+export enum CommandCategory {
+    admin = "admin",
+    data = "data",
+    test = "test",
+    user = "user"
 }
 export enum ForecastMethod {
     movingAverage = "movingAverage",
@@ -141,33 +173,55 @@ export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     addCryptoToWatchlist(symbol: CryptoSymbol): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    debugCheckSymbol(symbol: string): Promise<string>;
-    debugFetchRawTicker(): Promise<string>;
+    checkAndInitializeUser(): Promise<boolean>;
+    createOrUpdatePriceAlert(input: AlertInput): Promise<void>;
+    debugCheckSymbol(symbol: string): Promise<boolean>;
     debugGetAdminList(): Promise<Array<Principal>>;
-    debugParseTicker(symbol: string): Promise<string>;
-    debugResetSystem(): Promise<string>;
     debugSymbolCount(): Promise<bigint>;
-    debugTestCoinGecko(): Promise<string>;
-    debugValidSymbols(): Promise<Array<[string, string]>>;
-    fetchCoinGeckoData(symbol: CryptoSymbol): Promise<string | null>;
+    debugValidSymbols(): Promise<Array<[DisplaySymbol, CryptoSymbol]>>;
+    deleteAlert(alertId: bigint): Promise<void>;
+    disableAlert(alertId: bigint): Promise<void>;
+    disableAllAlerts(): Promise<void>;
+    emergencyGrantAdmin(user: Principal): Promise<void>;
+    fetchCoinGeckoData(symbol: CryptoSymbol): Promise<LiveMarketResponse | null>;
+    getActiveAlerts(): Promise<Array<[bigint, PriceAlert]>>;
+    getAdminInitializationErrorMessage(): Promise<string | null>;
+    getAdminList(): Promise<Array<Principal>>;
     getAlertSettings(symbol: CryptoSymbol): Promise<AlertSettings | null>;
+    getAlerts(): Promise<Array<[bigint, PriceAlert]>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getCommandRegistry(): Promise<Array<CommandEntry>>;
     getForecastMethod(symbol: CryptoSymbol): Promise<ForecastMethod | null>;
     getLiveMarketData(symbol: CryptoSymbol): Promise<LiveMarketResponse | null>;
+    getRole(): Promise<Role>;
+    getSingleAlert(alertId: bigint): Promise<PriceAlert | null>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     getValidSymbols(): Promise<Array<[DisplaySymbol, SymbolPair]>>;
     getWatchlist(): Promise<Array<CryptoSymbol>>;
-    initializeCryptoSystem(): Promise<void>;
+    grantUserPermission(user: Principal): Promise<void>;
+    initializePermanentAdmin(): Promise<InitializePermanentAdminResult>;
     isCallerAdmin(): Promise<boolean>;
     loadValidCryptoSymbols(): Promise<void>;
+    registerSelfAsUser(): Promise<void>;
+    registerWithRole(role: Role): Promise<void>;
     removeCryptoFromWatchlist(symbol: CryptoSymbol): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    savePermanentAdmin(_oldAdmin: Principal): Promise<void>;
     setAlertSettings(symbol: CryptoSymbol, settings: AlertSettings): Promise<void>;
     setForecastMethod(symbol: CryptoSymbol, method: ForecastMethod): Promise<void>;
+    testAPIResponseFormat(_symbol: string): Promise<boolean>;
+    testAlertSettings(symbol: string, threshold: number): Promise<boolean>;
+    testAllNineSymbols(): Promise<boolean>;
+    testBulkSymbolValidation(): Promise<boolean>;
+    testForecastMethod(symbol: string, method: string): Promise<boolean>;
+    testHistoricalDataFetch(symbol: string): Promise<boolean>;
+    testSymbolDataIntegrity(_symbol: string): Promise<boolean>;
+    testWatchlistAdd(symbol: string): Promise<boolean>;
+    testWatchlistRemove(symbol: string): Promise<boolean>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
 }
-import type { AlertSettings as _AlertSettings, ForecastMethod as _ForecastMethod, LiveMarketResponse as _LiveMarketResponse, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
+import type { AlertDirection as _AlertDirection, AlertInput as _AlertInput, AlertSettings as _AlertSettings, CommandCategory as _CommandCategory, CommandEntry as _CommandEntry, CryptoSymbol as _CryptoSymbol, ForecastMethod as _ForecastMethod, LiveMarketResponse as _LiveMarketResponse, PriceAlert as _PriceAlert, Role as _Role, Time as _Time, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
@@ -212,7 +266,35 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async debugCheckSymbol(arg0: string): Promise<string> {
+    async checkAndInitializeUser(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.checkAndInitializeUser();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.checkAndInitializeUser();
+            return result;
+        }
+    }
+    async createOrUpdatePriceAlert(arg0: AlertInput): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.createOrUpdatePriceAlert(to_candid_AlertInput_n3(this._uploadFile, this._downloadFile, arg0));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.createOrUpdatePriceAlert(to_candid_AlertInput_n3(this._uploadFile, this._downloadFile, arg0));
+            return result;
+        }
+    }
+    async debugCheckSymbol(arg0: string): Promise<boolean> {
         if (this.processError) {
             try {
                 const result = await this.actor.debugCheckSymbol(arg0);
@@ -223,20 +305,6 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.debugCheckSymbol(arg0);
-            return result;
-        }
-    }
-    async debugFetchRawTicker(): Promise<string> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.debugFetchRawTicker();
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.debugFetchRawTicker();
             return result;
         }
     }
@@ -254,34 +322,6 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async debugParseTicker(arg0: string): Promise<string> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.debugParseTicker(arg0);
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.debugParseTicker(arg0);
-            return result;
-        }
-    }
-    async debugResetSystem(): Promise<string> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.debugResetSystem();
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.debugResetSystem();
-            return result;
-        }
-    }
     async debugSymbolCount(): Promise<bigint> {
         if (this.processError) {
             try {
@@ -296,21 +336,7 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async debugTestCoinGecko(): Promise<string> {
-        if (this.processError) {
-            try {
-                const result = await this.actor.debugTestCoinGecko();
-                return result;
-            } catch (e) {
-                this.processError(e);
-                throw new Error("unreachable");
-            }
-        } else {
-            const result = await this.actor.debugTestCoinGecko();
-            return result;
-        }
-    }
-    async debugValidSymbols(): Promise<Array<[string, string]>> {
+    async debugValidSymbols(): Promise<Array<[DisplaySymbol, CryptoSymbol]>> {
         if (this.processError) {
             try {
                 const result = await this.actor.debugValidSymbols();
@@ -324,102 +350,256 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async fetchCoinGeckoData(arg0: CryptoSymbol): Promise<string | null> {
+    async deleteAlert(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.deleteAlert(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.deleteAlert(arg0);
+            return result;
+        }
+    }
+    async disableAlert(arg0: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.disableAlert(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.disableAlert(arg0);
+            return result;
+        }
+    }
+    async disableAllAlerts(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.disableAllAlerts();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.disableAllAlerts();
+            return result;
+        }
+    }
+    async emergencyGrantAdmin(arg0: Principal): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.emergencyGrantAdmin(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.emergencyGrantAdmin(arg0);
+            return result;
+        }
+    }
+    async fetchCoinGeckoData(arg0: CryptoSymbol): Promise<LiveMarketResponse | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.fetchCoinGeckoData(arg0);
-                return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n7(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.fetchCoinGeckoData(arg0);
-            return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n7(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getActiveAlerts(): Promise<Array<[bigint, PriceAlert]>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getActiveAlerts();
+                return from_candid_vec_n8(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getActiveAlerts();
+            return from_candid_vec_n8(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getAdminInitializationErrorMessage(): Promise<string | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAdminInitializationErrorMessage();
+                return from_candid_opt_n14(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAdminInitializationErrorMessage();
+            return from_candid_opt_n14(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getAdminList(): Promise<Array<Principal>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAdminList();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAdminList();
+            return result;
         }
     }
     async getAlertSettings(arg0: CryptoSymbol): Promise<AlertSettings | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getAlertSettings(arg0);
-                return from_candid_opt_n4(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n15(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getAlertSettings(arg0);
-            return from_candid_opt_n4(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n15(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getAlerts(): Promise<Array<[bigint, PriceAlert]>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getAlerts();
+                return from_candid_vec_n8(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getAlerts();
+            return from_candid_vec_n8(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserProfile(): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserProfile();
-                return from_candid_opt_n5(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n16(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserProfile();
-            return from_candid_opt_n5(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n16(this._uploadFile, this._downloadFile, result);
         }
     }
     async getCallerUserRole(): Promise<UserRole> {
         if (this.processError) {
             try {
                 const result = await this.actor.getCallerUserRole();
-                return from_candid_UserRole_n6(this._uploadFile, this._downloadFile, result);
+                return from_candid_UserRole_n17(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getCallerUserRole();
-            return from_candid_UserRole_n6(this._uploadFile, this._downloadFile, result);
+            return from_candid_UserRole_n17(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getCommandRegistry(): Promise<Array<CommandEntry>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getCommandRegistry();
+                return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getCommandRegistry();
+            return from_candid_vec_n19(this._uploadFile, this._downloadFile, result);
         }
     }
     async getForecastMethod(arg0: CryptoSymbol): Promise<ForecastMethod | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getForecastMethod(arg0);
-                return from_candid_opt_n8(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n24(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getForecastMethod(arg0);
-            return from_candid_opt_n8(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n24(this._uploadFile, this._downloadFile, result);
         }
     }
     async getLiveMarketData(arg0: CryptoSymbol): Promise<LiveMarketResponse | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getLiveMarketData(arg0);
-                return from_candid_opt_n11(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n7(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getLiveMarketData(arg0);
-            return from_candid_opt_n11(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n7(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getRole(): Promise<Role> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getRole();
+                return from_candid_Role_n27(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getRole();
+            return from_candid_Role_n27(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getSingleAlert(arg0: bigint): Promise<PriceAlert | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getSingleAlert(arg0);
+                return from_candid_opt_n28(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getSingleAlert(arg0);
+            return from_candid_opt_n28(this._uploadFile, this._downloadFile, result);
         }
     }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
         if (this.processError) {
             try {
                 const result = await this.actor.getUserProfile(arg0);
-                return from_candid_opt_n5(this._uploadFile, this._downloadFile, result);
+                return from_candid_opt_n16(this._uploadFile, this._downloadFile, result);
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
             const result = await this.actor.getUserProfile(arg0);
-            return from_candid_opt_n5(this._uploadFile, this._downloadFile, result);
+            return from_candid_opt_n16(this._uploadFile, this._downloadFile, result);
         }
     }
     async getValidSymbols(): Promise<Array<[DisplaySymbol, SymbolPair]>> {
@@ -450,17 +630,31 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async initializeCryptoSystem(): Promise<void> {
+    async grantUserPermission(arg0: Principal): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.initializeCryptoSystem();
+                const result = await this.actor.grantUserPermission(arg0);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.initializeCryptoSystem();
+            const result = await this.actor.grantUserPermission(arg0);
+            return result;
+        }
+    }
+    async initializePermanentAdmin(): Promise<InitializePermanentAdminResult> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.initializePermanentAdmin();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.initializePermanentAdmin();
             return result;
         }
     }
@@ -492,6 +686,34 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async registerSelfAsUser(): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.registerSelfAsUser();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.registerSelfAsUser();
+            return result;
+        }
+    }
+    async registerWithRole(arg0: Role): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.registerWithRole(to_candid_Role_n29(this._uploadFile, this._downloadFile, arg0));
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.registerWithRole(to_candid_Role_n29(this._uploadFile, this._downloadFile, arg0));
+            return result;
+        }
+    }
     async removeCryptoFromWatchlist(arg0: CryptoSymbol): Promise<void> {
         if (this.processError) {
             try {
@@ -520,6 +742,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async savePermanentAdmin(arg0: Principal): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.savePermanentAdmin(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.savePermanentAdmin(arg0);
+            return result;
+        }
+    }
     async setAlertSettings(arg0: CryptoSymbol, arg1: AlertSettings): Promise<void> {
         if (this.processError) {
             try {
@@ -537,14 +773,140 @@ export class Backend implements backendInterface {
     async setForecastMethod(arg0: CryptoSymbol, arg1: ForecastMethod): Promise<void> {
         if (this.processError) {
             try {
-                const result = await this.actor.setForecastMethod(arg0, to_candid_ForecastMethod_n12(this._uploadFile, this._downloadFile, arg1));
+                const result = await this.actor.setForecastMethod(arg0, to_candid_ForecastMethod_n30(this._uploadFile, this._downloadFile, arg1));
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.setForecastMethod(arg0, to_candid_ForecastMethod_n12(this._uploadFile, this._downloadFile, arg1));
+            const result = await this.actor.setForecastMethod(arg0, to_candid_ForecastMethod_n30(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async testAPIResponseFormat(arg0: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.testAPIResponseFormat(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.testAPIResponseFormat(arg0);
+            return result;
+        }
+    }
+    async testAlertSettings(arg0: string, arg1: number): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.testAlertSettings(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.testAlertSettings(arg0, arg1);
+            return result;
+        }
+    }
+    async testAllNineSymbols(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.testAllNineSymbols();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.testAllNineSymbols();
+            return result;
+        }
+    }
+    async testBulkSymbolValidation(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.testBulkSymbolValidation();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.testBulkSymbolValidation();
+            return result;
+        }
+    }
+    async testForecastMethod(arg0: string, arg1: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.testForecastMethod(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.testForecastMethod(arg0, arg1);
+            return result;
+        }
+    }
+    async testHistoricalDataFetch(arg0: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.testHistoricalDataFetch(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.testHistoricalDataFetch(arg0);
+            return result;
+        }
+    }
+    async testSymbolDataIntegrity(arg0: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.testSymbolDataIntegrity(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.testSymbolDataIntegrity(arg0);
+            return result;
+        }
+    }
+    async testWatchlistAdd(arg0: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.testWatchlistAdd(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.testWatchlistAdd(arg0);
+            return result;
+        }
+    }
+    async testWatchlistRemove(arg0: string): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.testWatchlistRemove(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.testWatchlistRemove(arg0);
             return result;
         }
     }
@@ -563,37 +925,98 @@ export class Backend implements backendInterface {
         }
     }
 }
-function from_candid_ForecastMethod_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ForecastMethod): ForecastMethod {
-    return from_candid_variant_n10(_uploadFile, _downloadFile, value);
+function from_candid_AlertDirection_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _AlertDirection): AlertDirection {
+    return from_candid_variant_n13(_uploadFile, _downloadFile, value);
 }
-function from_candid_UserRole_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
-    return from_candid_variant_n7(_uploadFile, _downloadFile, value);
+function from_candid_CommandCategory_n22(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CommandCategory): CommandCategory {
+    return from_candid_variant_n23(_uploadFile, _downloadFile, value);
 }
-function from_candid_opt_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_LiveMarketResponse]): LiveMarketResponse | null {
+function from_candid_CommandEntry_n20(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _CommandEntry): CommandEntry {
+    return from_candid_record_n21(_uploadFile, _downloadFile, value);
+}
+function from_candid_ForecastMethod_n25(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _ForecastMethod): ForecastMethod {
+    return from_candid_variant_n26(_uploadFile, _downloadFile, value);
+}
+function from_candid_PriceAlert_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _PriceAlert): PriceAlert {
+    return from_candid_record_n11(_uploadFile, _downloadFile, value);
+}
+function from_candid_Role_n27(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _Role): Role {
+    return from_candid_variant_n18(_uploadFile, _downloadFile, value);
+}
+function from_candid_UserRole_n17(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
+    return from_candid_variant_n18(_uploadFile, _downloadFile, value);
+}
+function from_candid_opt_n14(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [string]): string | null {
+function from_candid_opt_n15(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_AlertSettings]): AlertSettings | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_AlertSettings]): AlertSettings | null {
+function from_candid_opt_n16(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+function from_candid_opt_n24(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ForecastMethod]): ForecastMethod | null {
+    return value.length === 0 ? null : from_candid_ForecastMethod_n25(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n28(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_PriceAlert]): PriceAlert | null {
+    return value.length === 0 ? null : from_candid_PriceAlert_n10(_uploadFile, _downloadFile, value[0]);
+}
+function from_candid_opt_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_LiveMarketResponse]): LiveMarketResponse | null {
     return value.length === 0 ? null : value[0];
 }
-function from_candid_opt_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ForecastMethod]): ForecastMethod | null {
-    return value.length === 0 ? null : from_candid_ForecastMethod_n9(_uploadFile, _downloadFile, value[0]);
+function from_candid_record_n11(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    alertType: string;
+    direction: _AlertDirection;
+    createdAt: _Time;
+    targetPrice: number;
+    isActive: boolean;
+    symbol: _CryptoSymbol;
+}): {
+    alertType: string;
+    direction: AlertDirection;
+    createdAt: Time;
+    targetPrice: number;
+    isActive: boolean;
+    symbol: CryptoSymbol;
+} {
+    return {
+        alertType: value.alertType,
+        direction: from_candid_AlertDirection_n12(_uploadFile, _downloadFile, value.direction),
+        createdAt: value.createdAt,
+        targetPrice: value.targetPrice,
+        isActive: value.isActive,
+        symbol: value.symbol
+    };
 }
-function from_candid_variant_n10(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
-    movingAverage: null;
+function from_candid_record_n21(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    description: string;
+    command: string;
+    category: _CommandCategory;
+}): {
+    description: string;
+    command: string;
+    category: CommandCategory;
+} {
+    return {
+        description: value.description,
+        command: value.command,
+        category: from_candid_CommandCategory_n22(_uploadFile, _downloadFile, value.category)
+    };
+}
+function from_candid_tuple_n9(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [bigint, _PriceAlert]): [bigint, PriceAlert] {
+    return [
+        value[0],
+        from_candid_PriceAlert_n10(_uploadFile, _downloadFile, value[1])
+    ];
+}
+function from_candid_variant_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    above: null;
 } | {
-    exponentialSmoothing: null;
-} | {
-    linearRegression: null;
-}): ForecastMethod {
-    return "movingAverage" in value ? ForecastMethod.movingAverage : "exponentialSmoothing" in value ? ForecastMethod.exponentialSmoothing : "linearRegression" in value ? ForecastMethod.linearRegression : value;
+    below: null;
+}): AlertDirection {
+    return "above" in value ? AlertDirection.above : "below" in value ? AlertDirection.below : value;
 }
-function from_candid_variant_n7(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+function from_candid_variant_n18(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     admin: null;
 } | {
     user: null;
@@ -602,26 +1025,61 @@ function from_candid_variant_n7(_uploadFile: (file: ExternalBlob) => Promise<Uin
 }): UserRole {
     return "admin" in value ? UserRole.admin : "user" in value ? UserRole.user : "guest" in value ? UserRole.guest : value;
 }
-function to_candid_ForecastMethod_n12(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ForecastMethod): _ForecastMethod {
-    return to_candid_variant_n13(_uploadFile, _downloadFile, value);
+function from_candid_variant_n23(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    admin: null;
+} | {
+    data: null;
+} | {
+    test: null;
+} | {
+    user: null;
+}): CommandCategory {
+    return "admin" in value ? CommandCategory.admin : "data" in value ? CommandCategory.data : "test" in value ? CommandCategory.test : "user" in value ? CommandCategory.user : value;
 }
-function to_candid_UserRole_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
-    return to_candid_variant_n2(_uploadFile, _downloadFile, value);
-}
-function to_candid_variant_n13(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ForecastMethod): {
+function from_candid_variant_n26(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
     movingAverage: null;
 } | {
     exponentialSmoothing: null;
 } | {
     linearRegression: null;
+}): ForecastMethod {
+    return "movingAverage" in value ? ForecastMethod.movingAverage : "exponentialSmoothing" in value ? ForecastMethod.exponentialSmoothing : "linearRegression" in value ? ForecastMethod.linearRegression : value;
+}
+function from_candid_vec_n19(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<_CommandEntry>): Array<CommandEntry> {
+    return value.map((x)=>from_candid_CommandEntry_n20(_uploadFile, _downloadFile, x));
+}
+function from_candid_vec_n8(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Array<[bigint, _PriceAlert]>): Array<[bigint, PriceAlert]> {
+    return value.map((x)=>from_candid_tuple_n9(_uploadFile, _downloadFile, x));
+}
+function to_candid_AlertDirection_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: AlertDirection): _AlertDirection {
+    return to_candid_variant_n6(_uploadFile, _downloadFile, value);
+}
+function to_candid_AlertInput_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: AlertInput): _AlertInput {
+    return to_candid_record_n4(_uploadFile, _downloadFile, value);
+}
+function to_candid_ForecastMethod_n30(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ForecastMethod): _ForecastMethod {
+    return to_candid_variant_n31(_uploadFile, _downloadFile, value);
+}
+function to_candid_Role_n29(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: Role): _Role {
+    return to_candid_variant_n2(_uploadFile, _downloadFile, value);
+}
+function to_candid_UserRole_n1(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): _UserRole {
+    return to_candid_variant_n2(_uploadFile, _downloadFile, value);
+}
+function to_candid_record_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {
+    direction: AlertDirection;
+    targetPrice: number;
+    symbol: CryptoSymbol;
+}): {
+    direction: _AlertDirection;
+    targetPrice: number;
+    symbol: _CryptoSymbol;
 } {
-    return value == ForecastMethod.movingAverage ? {
-        movingAverage: null
-    } : value == ForecastMethod.exponentialSmoothing ? {
-        exponentialSmoothing: null
-    } : value == ForecastMethod.linearRegression ? {
-        linearRegression: null
-    } : value;
+    return {
+        direction: to_candid_AlertDirection_n5(_uploadFile, _downloadFile, value.direction),
+        targetPrice: value.targetPrice,
+        symbol: value.symbol
+    };
 }
 function to_candid_variant_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: UserRole): {
     admin: null;
@@ -636,6 +1094,32 @@ function to_candid_variant_n2(_uploadFile: (file: ExternalBlob) => Promise<Uint8
         user: null
     } : value == UserRole.guest ? {
         guest: null
+    } : value;
+}
+function to_candid_variant_n31(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: ForecastMethod): {
+    movingAverage: null;
+} | {
+    exponentialSmoothing: null;
+} | {
+    linearRegression: null;
+} {
+    return value == ForecastMethod.movingAverage ? {
+        movingAverage: null
+    } : value == ForecastMethod.exponentialSmoothing ? {
+        exponentialSmoothing: null
+    } : value == ForecastMethod.linearRegression ? {
+        linearRegression: null
+    } : value;
+}
+function to_candid_variant_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: AlertDirection): {
+    above: null;
+} | {
+    below: null;
+} {
+    return value == AlertDirection.above ? {
+        above: null
+    } : value == AlertDirection.below ? {
+        below: null
     } : value;
 }
 export interface CreateActorOptions {

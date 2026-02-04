@@ -10,20 +10,51 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export type AlertDirection = { 'above' : null } |
+  { 'below' : null };
+export interface AlertInput {
+  'direction' : AlertDirection,
+  'targetPrice' : number,
+  'symbol' : CryptoSymbol,
+}
 export interface AlertSettings {
   'enabled' : boolean,
   'thresholdPercent' : number,
+}
+export type CommandCategory = { 'admin' : null } |
+  { 'data' : null } |
+  { 'test' : null } |
+  { 'user' : null };
+export interface CommandEntry {
+  'description' : string,
+  'command' : string,
+  'category' : CommandCategory,
 }
 export type CryptoSymbol = string;
 export type DisplaySymbol = string;
 export type ForecastMethod = { 'movingAverage' : null } |
   { 'exponentialSmoothing' : null } |
   { 'linearRegression' : null };
+export interface InitializePermanentAdminResult {
+  'verifiedCaller' : Principal,
+  'permanentAdminSet' : boolean,
+}
 export interface LiveMarketResponse {
   'change24h' : number,
   'marketCap' : number,
   'price' : number,
 }
+export interface PriceAlert {
+  'alertType' : string,
+  'direction' : AlertDirection,
+  'createdAt' : Time,
+  'targetPrice' : number,
+  'isActive' : boolean,
+  'symbol' : CryptoSymbol,
+}
+export type Role = { 'admin' : null } |
+  { 'user' : null } |
+  { 'guest' : null };
 export interface SymbolPair {
   'network' : CryptoSymbol,
   'display' : DisplaySymbol,
@@ -52,30 +83,52 @@ export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'addCryptoToWatchlist' : ActorMethod<[CryptoSymbol], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  'debugCheckSymbol' : ActorMethod<[string], string>,
-  'debugFetchRawTicker' : ActorMethod<[], string>,
+  'checkAndInitializeUser' : ActorMethod<[], boolean>,
+  'createOrUpdatePriceAlert' : ActorMethod<[AlertInput], undefined>,
+  'debugCheckSymbol' : ActorMethod<[string], boolean>,
   'debugGetAdminList' : ActorMethod<[], Array<Principal>>,
-  'debugParseTicker' : ActorMethod<[string], string>,
-  'debugResetSystem' : ActorMethod<[], string>,
   'debugSymbolCount' : ActorMethod<[], bigint>,
-  'debugTestCoinGecko' : ActorMethod<[], string>,
-  'debugValidSymbols' : ActorMethod<[], Array<[string, string]>>,
-  'fetchCoinGeckoData' : ActorMethod<[CryptoSymbol], [] | [string]>,
+  'debugValidSymbols' : ActorMethod<[], Array<[DisplaySymbol, CryptoSymbol]>>,
+  'deleteAlert' : ActorMethod<[bigint], undefined>,
+  'disableAlert' : ActorMethod<[bigint], undefined>,
+  'disableAllAlerts' : ActorMethod<[], undefined>,
+  'emergencyGrantAdmin' : ActorMethod<[Principal], undefined>,
+  'fetchCoinGeckoData' : ActorMethod<[CryptoSymbol], [] | [LiveMarketResponse]>,
+  'getActiveAlerts' : ActorMethod<[], Array<[bigint, PriceAlert]>>,
+  'getAdminInitializationErrorMessage' : ActorMethod<[], [] | [string]>,
+  'getAdminList' : ActorMethod<[], Array<Principal>>,
   'getAlertSettings' : ActorMethod<[CryptoSymbol], [] | [AlertSettings]>,
+  'getAlerts' : ActorMethod<[], Array<[bigint, PriceAlert]>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getCommandRegistry' : ActorMethod<[], Array<CommandEntry>>,
   'getForecastMethod' : ActorMethod<[CryptoSymbol], [] | [ForecastMethod]>,
   'getLiveMarketData' : ActorMethod<[CryptoSymbol], [] | [LiveMarketResponse]>,
+  'getRole' : ActorMethod<[], Role>,
+  'getSingleAlert' : ActorMethod<[bigint], [] | [PriceAlert]>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'getValidSymbols' : ActorMethod<[], Array<[DisplaySymbol, SymbolPair]>>,
   'getWatchlist' : ActorMethod<[], Array<CryptoSymbol>>,
-  'initializeCryptoSystem' : ActorMethod<[], undefined>,
+  'grantUserPermission' : ActorMethod<[Principal], undefined>,
+  'initializePermanentAdmin' : ActorMethod<[], InitializePermanentAdminResult>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'loadValidCryptoSymbols' : ActorMethod<[], undefined>,
+  'registerSelfAsUser' : ActorMethod<[], undefined>,
+  'registerWithRole' : ActorMethod<[Role], undefined>,
   'removeCryptoFromWatchlist' : ActorMethod<[CryptoSymbol], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'savePermanentAdmin' : ActorMethod<[Principal], undefined>,
   'setAlertSettings' : ActorMethod<[CryptoSymbol, AlertSettings], undefined>,
   'setForecastMethod' : ActorMethod<[CryptoSymbol, ForecastMethod], undefined>,
+  'testAPIResponseFormat' : ActorMethod<[string], boolean>,
+  'testAlertSettings' : ActorMethod<[string, number], boolean>,
+  'testAllNineSymbols' : ActorMethod<[], boolean>,
+  'testBulkSymbolValidation' : ActorMethod<[], boolean>,
+  'testForecastMethod' : ActorMethod<[string, string], boolean>,
+  'testHistoricalDataFetch' : ActorMethod<[string], boolean>,
+  'testSymbolDataIntegrity' : ActorMethod<[string], boolean>,
+  'testWatchlistAdd' : ActorMethod<[string], boolean>,
+  'testWatchlistRemove' : ActorMethod<[string], boolean>,
   'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
 }
 export declare const idlService: IDL.ServiceClass;

@@ -1,95 +1,157 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 
 interface ForecastSettingsPanelProps {
   symbol: string;
+  movingAveragePeriod: number;
+  forecastHorizon: number;
+  onMovingAveragePeriodChange: (value: number) => void;
+  onForecastHorizonChange: (value: number) => void;
 }
 
-export default function ForecastSettingsPanel({ symbol }: ForecastSettingsPanelProps) {
-  const forecastMethods = [
-    {
-      name: 'Linear Regression',
-      description: 'Fits a straight line through historical data points to predict future trends. Best for assets with steady, consistent price movements.',
-      formula: 'y = mx + b',
-      useCase: 'Long-term trend analysis',
-    },
-    {
-      name: 'Moving Average',
-      description: 'Smooths price data by averaging recent values to identify trends. Reduces noise and highlights the overall direction.',
-      formula: 'MA = (P₁ + P₂ + ... + Pₙ) / n',
-      useCase: 'Short to medium-term trends',
-    },
-    {
-      name: 'Exponential Smoothing',
-      description: 'Weights recent data more heavily to capture current market momentum. Responds quickly to price changes while maintaining smoothness.',
-      formula: 'Sₜ = αPₜ + (1-α)Sₜ₋₁',
-      useCase: 'Volatile markets, recent trends',
-    },
-  ];
+const MA_PERIODS = [3, 7, 21, 50];
+
+export default function ForecastSettingsPanel({ 
+  symbol,
+  movingAveragePeriod,
+  forecastHorizon,
+  onMovingAveragePeriodChange,
+  onForecastHorizonChange
+}: ForecastSettingsPanelProps) {
+  // Map MA period to slider index
+  const maIndex = MA_PERIODS.indexOf(movingAveragePeriod);
+  const currentMaIndex = maIndex >= 0 ? maIndex : 1; // Default to 7 if not found
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Forecast Methods</CardTitle>
+        <CardTitle>Forecast Settings</CardTitle>
         <CardDescription>
-          Understanding the statistical methods used to analyze {symbol}
+          Adjust forecast parameters for {symbol} analysis
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <Alert variant="default" className="border-blue-500/50 bg-blue-500/10">
-          <Info className="h-4 w-4 text-blue-500" />
-          <AlertTitle className="text-blue-700 dark:text-blue-400">Multiple Forecast Methods Available</AlertTitle>
-          <AlertDescription className="text-sm">
-            The forecast chart displays all three methods simultaneously, allowing you to compare different statistical approaches. Each method has strengths depending on market conditions and your analysis timeframe.
-          </AlertDescription>
-        </Alert>
-
+      <CardContent className="space-y-8">
         <div className="space-y-4">
-          {forecastMethods.map((method, index) => (
-            <div
-              key={index}
-              className="p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
-            >
-              <div className="space-y-2">
-                <div className="flex items-start justify-between">
-                  <Label className="text-base font-semibold">{method.name}</Label>
-                  <span className="text-xs px-2 py-1 rounded-full bg-primary/10 text-primary font-mono">
-                    {method.formula}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">{method.description}</p>
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="text-xs font-medium text-muted-foreground">Best for:</span>
-                  <span className="text-xs px-2 py-0.5 rounded bg-muted">{method.useCase}</span>
-                </div>
-              </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="ma-period" className="text-base font-semibold">
+                Moving Average Period
+              </Label>
+              <span className="text-sm font-mono px-3 py-1 rounded-full bg-primary/10 text-primary">
+                {movingAveragePeriod} days
+              </span>
             </div>
-          ))}
+            <p className="text-sm text-muted-foreground">
+              Select the number of days to calculate the moving average. Shorter periods respond faster to price changes, while longer periods smooth out volatility.
+            </p>
+          </div>
+          
+          <div className="space-y-3">
+            <Slider
+              id="ma-period"
+              min={0}
+              max={3}
+              step={1}
+              value={[currentMaIndex]}
+              onValueChange={(value) => {
+                onMovingAveragePeriodChange(MA_PERIODS[value[0]]);
+              }}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground px-1">
+              {MA_PERIODS.map((period) => (
+                <span 
+                  key={period}
+                  className={movingAveragePeriod === period ? 'font-bold text-primary' : ''}
+                >
+                  {period}d
+                </span>
+              ))}
+            </div>
+          </div>
         </div>
 
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>How to Use</AlertTitle>
-          <AlertDescription className="text-sm space-y-1">
-            <p>All forecast methods are displayed on the chart with different line styles:</p>
-            <ul className="list-disc list-inside ml-2 space-y-0.5 mt-2">
-              <li><strong>Solid line:</strong> Historical actual prices</li>
-              <li><strong>Dashed lines:</strong> Forecast predictions from each method</li>
-              <li><strong>Reference line:</strong> Current live price from Kraken</li>
-            </ul>
-            <p className="mt-2">Compare the methods to understand different perspectives on {symbol}'s potential price movement.</p>
-          </AlertDescription>
-        </Alert>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="forecast-horizon" className="text-base font-semibold">
+                Forecast Horizon
+              </Label>
+              <span className="text-sm font-mono px-3 py-1 rounded-full bg-secondary/10 text-secondary">
+                {forecastHorizon} days
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Choose how many days ahead the Linear Regression should predict. Shorter horizons are more reliable, while longer horizons show extended trends.
+            </p>
+          </div>
+          
+          <div className="space-y-3">
+            <Slider
+              id="forecast-horizon"
+              min={3}
+              max={21}
+              step={1}
+              value={[forecastHorizon]}
+              onValueChange={(value) => {
+                onForecastHorizonChange(value[0]);
+              }}
+              className="w-full"
+            />
+            <div className="flex justify-between text-xs text-muted-foreground px-1">
+              <span>3 days</span>
+              <span className="text-center">12 days</span>
+              <span>21 days</span>
+            </div>
+          </div>
+        </div>
 
-        <div className="pt-4 border-t">
-          <h4 className="text-sm font-semibold mb-2">Data Requirements</h4>
-          <div className="text-sm text-muted-foreground space-y-1">
-            <p>• <strong>Minimum data points:</strong> 2 days of historical data</p>
-            <p>• <strong>Recommended:</strong> 30+ days for accurate trend analysis</p>
-            <p>• <strong>Data source:</strong> Kraken OHLC endpoint (daily candles)</p>
-            <p>• <strong>Update frequency:</strong> Real-time with 1-minute refresh</p>
+        <div className="pt-4 border-t space-y-3">
+          <h4 className="text-sm font-semibold">Quick Presets</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                onMovingAveragePeriodChange(7);
+                onForecastHorizonChange(5);
+              }}
+              className="px-3 py-2 text-sm rounded-lg border bg-card hover:bg-accent transition-colors text-left"
+            >
+              <div className="font-semibold">Short-term</div>
+              <div className="text-xs text-muted-foreground">7d MA, 5d forecast</div>
+            </button>
+            <button
+              onClick={() => {
+                onMovingAveragePeriodChange(21);
+                onForecastHorizonChange(14);
+              }}
+              className="px-3 py-2 text-sm rounded-lg border bg-card hover:bg-accent transition-colors text-left"
+            >
+              <div className="font-semibold">Long-term</div>
+              <div className="text-xs text-muted-foreground">21d MA, 14d forecast</div>
+            </button>
+          </div>
+        </div>
+
+        <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+          <h4 className="text-sm font-semibold">Current Settings Summary</h4>
+          <div className="grid gap-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Symbol:</span>
+              <span className="font-mono font-semibold">{symbol}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Moving Average:</span>
+              <span className="font-mono">{movingAveragePeriod}-day period</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Forecast Range:</span>
+              <span className="font-mono">{forecastHorizon} days ahead</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Auto-Update:</span>
+              <span className="font-mono text-green-600 dark:text-green-400">Enabled ✓</span>
+            </div>
           </div>
         </div>
       </CardContent>

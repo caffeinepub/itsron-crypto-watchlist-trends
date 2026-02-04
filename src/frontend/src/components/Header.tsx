@@ -1,13 +1,21 @@
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useTheme } from 'next-themes';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useQueryClient } from '@tanstack/react-query';
+import { useRegisterSelfAsUser } from '../hooks/useQueries';
+import { toast } from 'sonner';
+import BackendTesterEntryPoint from './BackendTesterEntryPoint';
 
-export default function Header() {
+interface HeaderProps {
+  onNavigateToTester?: () => void;
+}
+
+export default function Header({ onNavigateToTester }: HeaderProps) {
   const { theme, setTheme } = useTheme();
   const { identity, clear, login, loginStatus } = useInternetIdentity();
   const queryClient = useQueryClient();
+  const registerMutation = useRegisterSelfAsUser();
 
   const isAuthenticated = !!identity && !identity.getPrincipal().isAnonymous();
   const isLoggingIn = loginStatus === 'logging-in';
@@ -29,6 +37,16 @@ export default function Header() {
     }
   };
 
+  const handleRegister = async () => {
+    try {
+      await registerMutation.mutateAsync();
+      toast.success('Successfully registered as a user! You can now access market data.');
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Failed to register';
+      toast.error(`Registration failed: ${errorMessage}`);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-16 items-center justify-between">
@@ -42,6 +60,10 @@ export default function Header() {
         </div>
 
         <div className="flex items-center gap-2">
+          {isAuthenticated && onNavigateToTester && (
+            <BackendTesterEntryPoint onNavigate={onNavigateToTester} variant="header" />
+          )}
+
           <Button
             variant="ghost"
             size="icon"
@@ -52,6 +74,27 @@ export default function Header() {
             <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>
           </Button>
+
+          {isAuthenticated && (
+            <Button
+              onClick={handleRegister}
+              disabled={registerMutation.isPending}
+              variant="secondary"
+              className="hover:bg-secondary/80"
+            >
+              {registerMutation.isPending ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Registering...
+                </>
+              ) : (
+                <>
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Register
+                </>
+              )}
+            </Button>
+          )}
 
           <Button
             onClick={handleAuth}
