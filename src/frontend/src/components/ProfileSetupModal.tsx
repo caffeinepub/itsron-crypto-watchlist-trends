@@ -26,7 +26,6 @@ export default function ProfileSetupModal({ open }: ProfileSetupModalProps) {
     try {
       await saveProfile.mutateAsync({
         name: name.trim(),
-        lastActive: BigInt(Date.now()) * BigInt(1_000_000),
       });
       toast.success('Profile created successfully');
       setName('');

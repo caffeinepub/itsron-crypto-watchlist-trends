@@ -1,531 +1,565 @@
 import { backendInterface } from '../backend';
-import { UserRole, ForecastMethod } from '../backend';
+import { UserRole } from '../backend';
 
 export interface CommandDefinition {
   id: string;
   label: string;
-  category: 'registration' | 'connectivity' | 'diagnostics' | 'test-suite' | 'admin' | 'watchlist' | 'forecast' | 'alerts';
+  category: 'phase1-market' | 'phase1-symbols' | 'phase1-registration' | 'phase2-watchlist' | 'phase2-forecast' | 'phase2-alerts' | 'phase3-admin' | 'phase3-diagnostics';
   adminOnly: boolean;
   description: string;
+  mode: 'live' | 'demo';
   execute: (actor: backendInterface, identity?: any) => Promise<any>;
   parser?: (result: any) => string;
 }
 
 export const BACKEND_COMMANDS: CommandDefinition[] = [
-  // User Registration Commands
+  // ============================================================================
+  // PHASE 1 - CORE FUNCTIONS: Market Data
+  // ============================================================================
+  {
+    id: 'getLiveMarketData',
+    label: 'Get Live Market Data',
+    category: 'phase1-market',
+    adminOnly: false,
+    mode: 'demo',
+    description: 'Fetch live market data for a cryptocurrency (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        symbol: 'BTC',
+        price: 45230.50,
+        change24h: 2.34,
+        volume: 28500000000,
+        marketCap: 885000000000,
+      };
+    },
+    parser: (result) => `Symbol: ${result.symbol}\nPrice: $${result.price.toLocaleString()}\n24h Change: ${result.change24h}%\nVolume: $${result.volume.toLocaleString()}\nMarket Cap: $${result.marketCap.toLocaleString()}`,
+  },
+  {
+    id: 'getHistoricalData',
+    label: 'Get Historical Data',
+    category: 'phase1-market',
+    adminOnly: false,
+    mode: 'demo',
+    description: 'Fetch historical price data for analysis (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      const dataPoints = 7;
+      const data = Array.from({ length: dataPoints }, (_, i) => ({
+        timestamp: new Date(Date.now() - (dataPoints - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        price: 44000 + Math.random() * 2000,
+      }));
+      return { symbol: 'BTC', dataPoints: data.length, data };
+    },
+    parser: (result) => `Symbol: ${result.symbol}\nData Points: ${result.dataPoints}\nLatest: ${result.data[result.data.length - 1].timestamp} - $${result.data[result.data.length - 1].price.toFixed(2)}`,
+  },
+
+  // ============================================================================
+  // PHASE 1 - CORE FUNCTIONS: Symbol Management
+  // ============================================================================
+  {
+    id: 'getValidSymbols',
+    label: 'Get Valid Symbols',
+    category: 'phase1-symbols',
+    adminOnly: false,
+    mode: 'demo',
+    description: 'Retrieve list of valid cryptocurrency symbols (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        count: 5,
+        symbols: ['BTC', 'ETH', 'SOL', 'ATOM', 'MATIC'],
+      };
+    },
+    parser: (result) => `Total Symbols: ${result.count}\nSymbols: ${result.symbols.join(', ')}`,
+  },
+  {
+    id: 'loadValidCryptoSymbols',
+    label: 'Load Crypto Symbols',
+    category: 'phase1-symbols',
+    adminOnly: true,
+    mode: 'demo',
+    description: 'Load and cache valid cryptocurrency symbols (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        loaded: 150,
+        cached: true,
+        source: 'Simulated Exchange Data',
+      };
+    },
+    parser: (result) => `Loaded: ${result.loaded} symbols\nCached: ${result.cached ? 'Yes' : 'No'}\nSource: ${result.source}`,
+  },
+
+  // ============================================================================
+  // PHASE 1 - CORE FUNCTIONS: User Registration
+  // ============================================================================
   {
     id: 'registerSelfAsUser',
     label: 'Register Self as User',
-    category: 'registration',
+    category: 'phase1-registration',
     adminOnly: false,
-    description: 'Register your principal as a user to access user-restricted functions',
-    execute: async (actor) => {
-      await actor.registerSelfAsUser();
-      return { success: true };
+    mode: 'demo',
+    description: 'Register your principal as a user in the system (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        success: true,
+        role: 'user',
+        message: 'User registration successful',
+      };
     },
-    parser: () => 'Success: You are now registered as a user.',
+    parser: (result) => `${result.message}\nRole: ${result.role}`,
   },
   {
-    id: 'grantUserPermission',
-    label: 'Grant User Permission',
-    category: 'registration',
-    adminOnly: true,
-    description: 'Grant user permission to your principal (admin only)',
-    execute: async (actor, identity) => {
-      if (!identity) throw new Error('Identity not available');
-      await actor.grantUserPermission(identity.getPrincipal());
-      return { success: true };
-    },
-    parser: () => 'Success: User permission granted to your principal.',
-  },
-  {
-    id: 'checkAndInitializeUser',
-    label: 'Check & Init User',
-    category: 'registration',
-    adminOnly: false,
-    description: 'Check if user is initialized and initialize if needed',
-    execute: async (actor) => {
-      const result = await actor.checkAndInitializeUser();
-      return { isAdmin: result };
-    },
-    parser: (result) => `User initialized. Admin status: ${result.isAdmin}`,
-  },
-  {
-    id: 'getRole',
+    id: 'getMyRole',
     label: 'Get My Role',
-    category: 'registration',
+    category: 'phase1-registration',
     adminOnly: false,
-    description: 'Get your current role in the system',
+    mode: 'live',
+    description: 'Check your current role in the system (Live - calls backend canister)',
     execute: async (actor) => {
-      const role = await actor.getRole();
+      const role = await actor.getCallerUserRole();
       return { role };
     },
     parser: (result) => `Your role: ${result.role}`,
   },
   {
-    id: 'getCallerUserProfile',
+    id: 'getMyProfile',
     label: 'Get My Profile',
-    category: 'registration',
+    category: 'phase1-registration',
     adminOnly: false,
-    description: 'Get your user profile',
+    mode: 'live',
+    description: 'Retrieve your user profile (Live - calls backend canister)',
     execute: async (actor) => {
       const profile = await actor.getCallerUserProfile();
-      return profile;
+      return { profile };
     },
-    parser: (result) => {
-      if (!result) return 'No profile found';
-      return `Name: ${result.name}\nLast Active: ${new Date(Number(result.lastActive) / 1000000).toLocaleString()}`;
+    parser: (result) => result.profile ? `Name: ${result.profile.name}` : 'No profile found',
+  },
+  {
+    id: 'saveMyProfile',
+    label: 'Save My Profile',
+    category: 'phase1-registration',
+    adminOnly: false,
+    mode: 'live',
+    description: 'Save or update your user profile (Live - calls backend canister with test name)',
+    execute: async (actor) => {
+      await actor.saveCallerUserProfile({ name: 'Test User' });
+      return { success: true, name: 'Test User' };
     },
+    parser: (result) => `Profile saved successfully\nName: ${result.name}`,
   },
 
-  // Connectivity Commands
-  {
-    id: 'loadValidCryptoSymbols',
-    label: 'Load Symbols',
-    category: 'connectivity',
-    adminOnly: true,
-    description: 'Load the valid cryptocurrency symbols list',
-    execute: async (actor) => {
-      await actor.loadValidCryptoSymbols();
-      return { success: true };
-    },
-    parser: () => 'Success: Cryptocurrency symbols loaded',
-  },
-  {
-    id: 'getValidSymbols',
-    label: 'Get Valid Symbols',
-    category: 'connectivity',
-    adminOnly: false,
-    description: 'Get the list of all valid cryptocurrency symbols',
-    execute: async (actor) => {
-      const symbols = await actor.getValidSymbols();
-      return { count: symbols.length, symbols: symbols.slice(0, 10) };
-    },
-    parser: (result) => `Found ${result.count} symbols. First 10: ${result.symbols.map((s: any) => s[0]).join(', ')}`,
-  },
-
-  // Diagnostics Commands
-  {
-    id: 'debugSymbolCount',
-    label: 'Symbol Count',
-    category: 'diagnostics',
-    adminOnly: true,
-    description: 'Get the total number of loaded symbols',
-    execute: async (actor) => {
-      const count = await actor.debugSymbolCount();
-      return { totalSymbols: Number(count) };
-    },
-    parser: (result) => `Total symbols loaded: ${result.totalSymbols}`,
-  },
-  {
-    id: 'debugValidSymbols',
-    label: 'Valid Symbols Array',
-    category: 'diagnostics',
-    adminOnly: true,
-    description: 'Get the complete list of valid symbols with mappings',
-    execute: async (actor) => {
-      const symbols = await actor.debugValidSymbols();
-      return {
-        count: symbols.length,
-        mappings: symbols.map(([display, coinGeckoId]) => `${display} → ${coinGeckoId}`),
-      };
-    },
-    parser: (result) => `${result.count} symbols:\n${result.mappings.join('\n')}`,
-  },
-  {
-    id: 'debugCheckSymbol',
-    label: 'Check BTC Symbol',
-    category: 'diagnostics',
-    adminOnly: true,
-    description: 'Check if BTC symbol is valid',
-    execute: async (actor) => {
-      const result = await actor.debugCheckSymbol('BTC');
-      return { valid: result };
-    },
-    parser: (result) => `BTC symbol is ${result.valid ? 'valid ✓' : 'invalid ✗'}`,
-  },
-  {
-    id: 'getLiveMarketDataBTC',
-    label: 'Get BTC Price',
-    category: 'diagnostics',
-    adminOnly: false,
-    description: 'Get live market data for Bitcoin',
-    execute: async (actor) => {
-      const data = await actor.getLiveMarketData('BTC');
-      return data;
-    },
-    parser: (result) => {
-      if (result === null) {
-        return '❌ API Error: Unable to fetch live data for BTC. This may be due to API rate limits or the backend returning null.';
-      }
-      if (typeof result === 'object' && result.price !== undefined) {
-        const price = result.price ? `$${result.price.toFixed(2)}` : 'N/A';
-        const change = result.change24h !== undefined ? `${result.change24h.toFixed(2)}%` : 'N/A';
-        const marketCap = result.marketCap ? `$${(result.marketCap / 1e9).toFixed(2)}B` : 'N/A';
-        return `✅ BTC Live Data:\n  Price: ${price}\n  24h Change: ${change}\n  Market Cap: ${marketCap}`;
-      }
-      return `⚠️ Unexpected response format: ${JSON.stringify(result)}`;
-    },
-  },
-  {
-    id: 'getLiveMarketDataETH',
-    label: 'Get ETH Price',
-    category: 'diagnostics',
-    adminOnly: false,
-    description: 'Get live market data for Ethereum',
-    execute: async (actor) => {
-      const data = await actor.getLiveMarketData('ETH');
-      return data;
-    },
-    parser: (result) => {
-      if (result === null) {
-        return '❌ API Error: Unable to fetch live data for ETH. This may be due to API rate limits or the backend returning null.';
-      }
-      if (typeof result === 'object' && result.price !== undefined) {
-        const price = result.price ? `$${result.price.toFixed(2)}` : 'N/A';
-        const change = result.change24h !== undefined ? `${result.change24h.toFixed(2)}%` : 'N/A';
-        const marketCap = result.marketCap ? `$${(result.marketCap / 1e9).toFixed(2)}B` : 'N/A';
-        return `✅ ETH Live Data:\n  Price: ${price}\n  24h Change: ${change}\n  Market Cap: ${marketCap}`;
-      }
-      return `⚠️ Unexpected response format: ${JSON.stringify(result)}`;
-    },
-  },
-  {
-    id: 'getLiveMarketDataSOL',
-    label: 'Get SOL Price',
-    category: 'diagnostics',
-    adminOnly: false,
-    description: 'Get live market data for Solana',
-    execute: async (actor) => {
-      const data = await actor.getLiveMarketData('SOL');
-      return data;
-    },
-    parser: (result) => {
-      if (result === null) {
-        return '❌ API Error: Unable to fetch live data for SOL. This may be due to API rate limits or the backend returning null.';
-      }
-      if (typeof result === 'object' && result.price !== undefined) {
-        const price = result.price ? `$${result.price.toFixed(2)}` : 'N/A';
-        const change = result.change24h !== undefined ? `${result.change24h.toFixed(2)}%` : 'N/A';
-        const marketCap = result.marketCap ? `$${(result.marketCap / 1e9).toFixed(2)}B` : 'N/A';
-        return `✅ SOL Live Data:\n  Price: ${price}\n  24h Change: ${change}\n  Market Cap: ${marketCap}`;
-      }
-      return `⚠️ Unexpected response format: ${JSON.stringify(result)}`;
-    },
-  },
-  {
-    id: 'fetchCoinGeckoData',
-    label: 'Fetch CoinGecko (XRP)',
-    category: 'diagnostics',
-    adminOnly: false,
-    description: 'Fetch CoinGecko data for XRP',
-    execute: async (actor) => {
-      const data = await actor.fetchCoinGeckoData('XRP');
-      return data;
-    },
-    parser: (result) => {
-      if (result === null) return '❌ No data returned';
-      return `Price: $${result.price.toFixed(2)}, Change: ${result.change24h.toFixed(2)}%`;
-    },
-  },
-
-  // Watchlist Commands
+  // ============================================================================
+  // PHASE 2 - USER FEATURES: Watchlist
+  // ============================================================================
   {
     id: 'getWatchlist',
-    label: 'Get My Watchlist',
-    category: 'watchlist',
+    label: 'Get Watchlist',
+    category: 'phase2-watchlist',
     adminOnly: false,
-    description: 'Get your cryptocurrency watchlist',
-    execute: async (actor) => {
-      const watchlist = await actor.getWatchlist();
-      return { symbols: watchlist };
+    mode: 'demo',
+    description: 'Retrieve your personal watchlist (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        count: 3,
+        symbols: ['BTC', 'ETH', 'SOL'],
+      };
     },
-    parser: (result) => {
-      if (result.symbols.length === 0) return 'Watchlist is empty';
-      return `Watchlist (${result.symbols.length}): ${result.symbols.join(', ')}`;
-    },
+    parser: (result) => `Watchlist Count: ${result.count}\nSymbols: ${result.symbols.join(', ')}`,
   },
   {
-    id: 'addCryptoToWatchlist',
-    label: 'Add BTC to Watchlist',
-    category: 'watchlist',
+    id: 'addToWatchlist',
+    label: 'Add to Watchlist',
+    category: 'phase2-watchlist',
     adminOnly: false,
-    description: 'Add Bitcoin to your watchlist',
-    execute: async (actor) => {
-      await actor.addCryptoToWatchlist('BTC');
-      return { success: true };
+    mode: 'demo',
+    description: 'Add a cryptocurrency to your watchlist (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        success: true,
+        symbol: 'ATOM',
+        message: 'Added to watchlist',
+      };
     },
-    parser: () => 'Success: BTC added to watchlist',
+    parser: (result) => `${result.message}\nSymbol: ${result.symbol}`,
   },
   {
-    id: 'removeCryptoFromWatchlist',
-    label: 'Remove BTC from Watchlist',
-    category: 'watchlist',
+    id: 'removeFromWatchlist',
+    label: 'Remove from Watchlist',
+    category: 'phase2-watchlist',
     adminOnly: false,
-    description: 'Remove Bitcoin from your watchlist',
-    execute: async (actor) => {
-      await actor.removeCryptoFromWatchlist('BTC');
-      return { success: true };
+    mode: 'demo',
+    description: 'Remove a cryptocurrency from your watchlist (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        success: true,
+        symbol: 'ATOM',
+        message: 'Removed from watchlist',
+      };
     },
-    parser: () => 'Success: BTC removed from watchlist',
+    parser: (result) => `${result.message}\nSymbol: ${result.symbol}`,
   },
 
-  // Forecast Commands
+  // ============================================================================
+  // PHASE 2 - USER FEATURES: Forecast Settings
+  // ============================================================================
   {
-    id: 'getForecastMethod',
-    label: 'Get Forecast (BTC)',
-    category: 'forecast',
+    id: 'getForecastSettings',
+    label: 'Get Forecast Settings',
+    category: 'phase2-forecast',
     adminOnly: false,
-    description: 'Get forecast method for Bitcoin',
-    execute: async (actor) => {
-      const method = await actor.getForecastMethod('BTC');
-      return { method };
+    mode: 'demo',
+    description: 'Retrieve forecast settings for a symbol (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        symbol: 'BTC',
+        method: 'Linear Regression',
+        period: 7,
+        horizon: 14,
+      };
     },
-    parser: (result) => {
-      if (!result.method) return 'No forecast method set for BTC';
-      return `BTC forecast method: ${result.method}`;
-    },
+    parser: (result) => `Symbol: ${result.symbol}\nMethod: ${result.method}\nPeriod: ${result.period} days\nHorizon: ${result.horizon} days`,
   },
   {
-    id: 'setForecastMethod',
-    label: 'Set Forecast (ETH)',
-    category: 'forecast',
+    id: 'setForecastSettings',
+    label: 'Set Forecast Settings',
+    category: 'phase2-forecast',
     adminOnly: false,
-    description: 'Set linear regression forecast for Ethereum',
-    execute: async (actor) => {
-      await actor.setForecastMethod('ETH', { linearRegression: null } as any);
-      return { success: true };
+    mode: 'demo',
+    description: 'Update forecast settings for a symbol (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        success: true,
+        symbol: 'BTC',
+        method: 'Moving Average',
+        message: 'Forecast settings updated',
+      };
     },
-    parser: () => 'Success: Forecast method set to linear regression for ETH',
+    parser: (result) => `${result.message}\nSymbol: ${result.symbol}\nMethod: ${result.method}`,
   },
 
-  // Alert Commands
+  // ============================================================================
+  // PHASE 2 - USER FEATURES: Alert Settings
+  // ============================================================================
   {
     id: 'getAlertSettings',
-    label: 'Get Alerts (BTC)',
-    category: 'alerts',
+    label: 'Get Alert Settings',
+    category: 'phase2-alerts',
     adminOnly: false,
-    description: 'Get alert settings for Bitcoin',
-    execute: async (actor) => {
-      const settings = await actor.getAlertSettings('BTC');
-      return settings;
+    mode: 'demo',
+    description: 'Retrieve alert settings for a symbol (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        symbol: 'BTC',
+        priceAlertHigh: 50000,
+        priceAlertLow: 40000,
+        enabled: true,
+      };
     },
-    parser: (result) => {
-      if (!result) return 'No alert settings for BTC';
-      return `BTC alerts: ${result.enabled ? 'Enabled' : 'Disabled'}, Threshold: ${result.thresholdPercent}%`;
-    },
+    parser: (result) => `Symbol: ${result.symbol}\nHigh Alert: $${result.priceAlertHigh.toLocaleString()}\nLow Alert: $${result.priceAlertLow.toLocaleString()}\nEnabled: ${result.enabled ? 'Yes' : 'No'}`,
   },
   {
     id: 'setAlertSettings',
-    label: 'Set Alerts (SOL)',
-    category: 'alerts',
+    label: 'Set Alert Settings',
+    category: 'phase2-alerts',
     adminOnly: false,
-    description: 'Set alert settings for Solana (5% threshold)',
-    execute: async (actor) => {
-      await actor.setAlertSettings('SOL', { enabled: true, thresholdPercent: 5.0 });
-      return { success: true };
-    },
-    parser: () => 'Success: Alert settings updated for SOL (5% threshold, enabled)',
-  },
-
-  // Backend Test Suite Commands
-  {
-    id: 'testHistoricalDataFetch',
-    label: 'Test Historical (BTC)',
-    category: 'test-suite',
-    adminOnly: true,
-    description: 'Test historical data fetch for BTC',
-    execute: async (actor) => {
-      const result = await actor.testHistoricalDataFetch('BTC');
-      return { success: result, message: 'Historical data fetch test completed' };
-    },
-    parser: (result) => `Test ${result.success ? 'passed ✓' : 'failed ✗'}: ${result.message}`,
-  },
-  {
-    id: 'testAlertSettings',
-    label: 'Test Alert (ETH)',
-    category: 'test-suite',
-    adminOnly: true,
-    description: 'Test alert settings with 5% threshold for ETH',
-    execute: async (actor) => {
-      const result = await actor.testAlertSettings('ETH', 5.0);
-      return { success: result, message: 'Alert settings test completed with threshold 5.0%' };
-    },
-    parser: (result) => `Test ${result.success ? 'passed ✓' : 'failed ✗'}: ${result.message}`,
-  },
-  {
-    id: 'testForecastMethod',
-    label: 'Test Forecast (SOL)',
-    category: 'test-suite',
-    adminOnly: true,
-    description: 'Test forecast method (linear regression) for SOL',
-    execute: async (actor) => {
-      const result = await actor.testForecastMethod('SOL', 'linear');
-      return { success: result, message: 'Forecast method test completed for linear regression' };
-    },
-    parser: (result) => `Test ${result.success ? 'passed ✓' : 'failed ✗'}: ${result.message}`,
-  },
-  {
-    id: 'testWatchlistAdd',
-    label: 'Test Watchlist Add (XRP)',
-    category: 'test-suite',
-    adminOnly: true,
-    description: 'Test watchlist add operation for XRP',
-    execute: async (actor) => {
-      const result = await actor.testWatchlistAdd('XRP');
-      return { success: result, message: 'Watchlist add operation test completed' };
-    },
-    parser: (result) => `Test ${result.success ? 'passed ✓' : 'failed ✗'}: ${result.message}`,
-  },
-  {
-    id: 'testWatchlistRemove',
-    label: 'Test Watchlist Remove (USDT)',
-    category: 'test-suite',
-    adminOnly: true,
-    description: 'Test watchlist remove operation for USDT',
-    execute: async (actor) => {
-      const result = await actor.testWatchlistRemove('USDT');
-      return { success: result, message: 'Watchlist remove operation test completed' };
-    },
-    parser: (result) => `Test ${result.success ? 'passed ✓' : 'failed ✗'}: ${result.message}`,
-  },
-  {
-    id: 'testAllNineSymbols',
-    label: 'Test All 9 Symbols',
-    category: 'test-suite',
-    adminOnly: true,
-    description: 'Comprehensive test for all 9 core symbols',
-    execute: async (actor) => {
-      const result = await actor.testAllNineSymbols();
+    mode: 'demo',
+    description: 'Update alert settings for a symbol (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
       return {
-        success: result,
-        message: 'Comprehensive test completed for all 9 symbols: BTC, ETH, XRP, USDT, USDC, DOGE, ADA, SOL, MATIC',
-        symbols: ['BTC', 'ETH', 'XRP', 'USDT', 'USDC', 'DOGE', 'ADA', 'SOL', 'MATIC'],
+        success: true,
+        symbol: 'BTC',
+        message: 'Alert settings updated',
       };
     },
-    parser: (result) => `Test ${result.success ? 'passed ✓' : 'failed ✗'}: ${result.message}\nSymbols: ${result.symbols.join(', ')}`,
-  },
-  {
-    id: 'testSymbolDataIntegrity',
-    label: 'Test Data Integrity (DOGE)',
-    category: 'test-suite',
-    adminOnly: true,
-    description: 'Test symbol data integrity validation for DOGE',
-    execute: async (actor) => {
-      const result = await actor.testSymbolDataIntegrity('DOGE');
-      return { success: result, message: 'Symbol data integrity validation completed' };
-    },
-    parser: (result) => `Test ${result.success ? 'passed ✓' : 'failed ✗'}: ${result.message}`,
-  },
-  {
-    id: 'testBulkSymbolValidation',
-    label: 'Test Bulk Validation',
-    category: 'test-suite',
-    adminOnly: true,
-    description: 'Test bulk symbol validation for all symbols',
-    execute: async (actor) => {
-      const result = await actor.testBulkSymbolValidation();
-      return { success: result, message: 'Bulk symbol validation completed for all symbols in validSymbols map' };
-    },
-    parser: (result) => `Test ${result.success ? 'passed ✓' : 'failed ✗'}: ${result.message}`,
-  },
-  {
-    id: 'testAPIResponseFormat',
-    label: 'Test API Format (ADA)',
-    category: 'test-suite',
-    adminOnly: true,
-    description: 'Test API response format validation for ADA',
-    execute: async (actor) => {
-      const result = await actor.testAPIResponseFormat('ADA');
-      return { success: result, message: 'API response format validation completed - JSON structure verified' };
-    },
-    parser: (result) => `Test ${result.success ? 'passed ✓' : 'failed ✗'}: ${result.message}`,
+    parser: (result) => `${result.message}\nSymbol: ${result.symbol}`,
   },
 
-  // Admin Commands
+  // ============================================================================
+  // PHASE 3 - ADMIN/DEBUG: Admin Functions
+  // ============================================================================
   {
-    id: 'initializePermanentAdmin',
-    label: 'Bind Permanent Admin',
-    category: 'admin',
+    id: 'checkAdminStatus',
+    label: 'Check Admin Status',
+    category: 'phase3-admin',
     adminOnly: false,
-    description: 'Set your current Principal ID as the permanent operator admin (one-time only)',
-    execute: async (actor, identity) => {
-      if (!identity) throw new Error('Identity not available');
-      const result = await actor.initializePermanentAdmin();
-      return result;
-    },
-    parser: (result) => {
-      if (result.permanentAdminSet) {
-        return `✅ Success: Permanent admin bound to Principal:\n${result.verifiedCaller.toString()}\n\nThis Principal is now the permanent operator admin and will retain admin privileges across all upgrades.`;
-      } else {
-        return `ℹ️ Already bound: Permanent admin is already set to:\n${result.verifiedCaller.toString()}\n\nNo changes were made.`;
-      }
-    },
-  },
-  {
-    id: 'debugGetAdminList',
-    label: 'Get Admin List',
-    category: 'admin',
-    adminOnly: true,
-    description: 'Get the list of all admin principals',
-    execute: async (actor) => {
-      const admins = await actor.debugGetAdminList();
-      return {
-        count: admins.length,
-        admins: admins.map((p) => p.toString()),
-      };
-    },
-    parser: (result) => `Admin count: ${result.count}\n${result.admins.join('\n')}`,
-  },
-  {
-    id: 'getAdminInitializationErrorMessage',
-    label: 'Get Admin Init Error',
-    category: 'admin',
-    adminOnly: true,
-    description: 'Get admin initialization error message if any',
-    execute: async (actor) => {
-      const error = await actor.getAdminInitializationErrorMessage();
-      return { error };
-    },
-    parser: (result) => result.error || 'No admin initialization errors',
-  },
-  {
-    id: 'isCallerAdmin',
-    label: 'Am I Admin?',
-    category: 'admin',
-    adminOnly: true,
-    description: 'Check if you have admin privileges',
+    mode: 'live',
+    description: 'Check if you have admin privileges (Live - calls backend canister)',
     execute: async (actor) => {
       const isAdmin = await actor.isCallerAdmin();
       return { isAdmin };
     },
-    parser: (result) => `Admin status: ${result.isAdmin ? 'Yes ✓' : 'No ✗'}`,
+    parser: (result) => `Admin Status: ${result.isAdmin ? 'Yes ✓' : 'No ✗'}`,
+  },
+  {
+    id: 'assignUserRole',
+    label: 'Assign User Role',
+    category: 'phase3-admin',
+    adminOnly: true,
+    mode: 'live',
+    description: 'Assign user role to your principal (Live - calls backend canister, Admin only)',
+    execute: async (actor, identity) => {
+      if (!identity) throw new Error('Identity not available');
+      await actor.assignCallerUserRole(identity.getPrincipal(), UserRole.user);
+      return { success: true };
+    },
+    parser: () => 'Success: User role assigned to your principal',
+  },
+  {
+    id: 'assignAdminRole',
+    label: 'Assign Admin Role',
+    category: 'phase3-admin',
+    adminOnly: true,
+    mode: 'live',
+    description: 'Assign admin role to your principal (Live - calls backend canister, Admin only)',
+    execute: async (actor, identity) => {
+      if (!identity) throw new Error('Identity not available');
+      await actor.assignCallerUserRole(identity.getPrincipal(), UserRole.admin);
+      return { success: true };
+    },
+    parser: () => 'Success: Admin role assigned to your principal',
+  },
+
+  // ============================================================================
+  // PHASE 3 - ADMIN/DEBUG: Diagnostic Tools
+  // ============================================================================
+  {
+    id: 'symbolCount',
+    label: 'Symbol Count',
+    category: 'phase3-diagnostics',
+    adminOnly: false,
+    mode: 'demo',
+    description: 'Get total count of valid symbols (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return { count: 150 };
+    },
+    parser: (result) => `Total Valid Symbols: ${result.count}`,
+  },
+  {
+    id: 'parsePrice',
+    label: 'Parse Price (BTC)',
+    category: 'phase3-diagnostics',
+    adminOnly: false,
+    mode: 'demo',
+    description: 'Test price parsing for BTC (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        symbol: 'BTC',
+        rawPrice: '45230.50',
+        parsedPrice: 45230.50,
+        currency: 'USD',
+      };
+    },
+    parser: (result) => `Symbol: ${result.symbol}\nRaw: ${result.rawPrice}\nParsed: $${result.parsedPrice.toLocaleString()}\nCurrency: ${result.currency}`,
+  },
+  {
+    id: 'validSymbolsArray',
+    label: 'Valid Symbols Array',
+    category: 'phase3-diagnostics',
+    adminOnly: false,
+    mode: 'demo',
+    description: 'Get array of all valid symbols (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      const symbols = ['BTC', 'ETH', 'SOL', 'ATOM', 'MATIC', 'AVAX', 'DOT', 'LINK', 'UNI', 'AAVE'];
+      return {
+        count: symbols.length,
+        symbols: symbols.slice(0, 5),
+        hasMore: true,
+      };
+    },
+    parser: (result) => `Count: ${result.count}\nSample: ${result.symbols.join(', ')}${result.hasMore ? '...' : ''}`,
+  },
+  {
+    id: 'checkBTCSymbol',
+    label: 'Check BTC Symbol',
+    category: 'phase3-diagnostics',
+    adminOnly: false,
+    mode: 'demo',
+    description: 'Verify BTC symbol validity (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        symbol: 'BTC',
+        valid: true,
+        displayName: 'Bitcoin',
+        pair: 'XXBTZUSD',
+      };
+    },
+    parser: (result) => `Symbol: ${result.symbol}\nValid: ${result.valid ? 'Yes ✓' : 'No ✗'}\nDisplay: ${result.displayName}\nPair: ${result.pair}`,
+  },
+  {
+    id: 'getBTCPrice',
+    label: 'Get BTC Price',
+    category: 'phase3-diagnostics',
+    adminOnly: false,
+    mode: 'demo',
+    description: 'Fetch current BTC price (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        symbol: 'BTC',
+        price: 45230.50,
+        timestamp: new Date().toISOString(),
+      };
+    },
+    parser: (result) => `Symbol: ${result.symbol}\nPrice: $${result.price.toLocaleString()}\nTimestamp: ${result.timestamp}`,
+  },
+  {
+    id: 'getETHPrice',
+    label: 'Get ETH Price',
+    category: 'phase3-diagnostics',
+    adminOnly: false,
+    mode: 'demo',
+    description: 'Fetch current ETH price (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        symbol: 'ETH',
+        price: 2345.75,
+        timestamp: new Date().toISOString(),
+      };
+    },
+    parser: (result) => `Symbol: ${result.symbol}\nPrice: $${result.price.toLocaleString()}\nTimestamp: ${result.timestamp}`,
+  },
+  {
+    id: 'getSOLPrice',
+    label: 'Get SOL Price',
+    category: 'phase3-diagnostics',
+    adminOnly: false,
+    mode: 'demo',
+    description: 'Fetch current SOL price (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        symbol: 'SOL',
+        price: 98.45,
+        timestamp: new Date().toISOString(),
+      };
+    },
+    parser: (result) => `Symbol: ${result.symbol}\nPrice: $${result.price.toLocaleString()}\nTimestamp: ${result.timestamp}`,
+  },
+  {
+    id: 'connectionTest',
+    label: 'Connection Test',
+    category: 'phase3-diagnostics',
+    adminOnly: false,
+    mode: 'live',
+    description: 'Test backend connectivity (Live - calls backend canister)',
+    execute: async (actor) => {
+      const start = Date.now();
+      await actor.getCallerUserProfile();
+      const latency = Date.now() - start;
+      return { latency, status: 'connected' };
+    },
+    parser: (result) => `Backend responding ✓\nLatency: ${result.latency}ms\nStatus: ${result.status}`,
+  },
+  {
+    id: 'fetchETHData',
+    label: 'Fetch ETH Data (Debug)',
+    category: 'phase3-diagnostics',
+    adminOnly: false,
+    mode: 'demo',
+    description: 'Fetch ETH market data with debug info (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        symbol: 'ETH',
+        price: 2345.75,
+        volume: 15000000000,
+        source: 'Simulated Exchange Data',
+        responseTime: 234,
+      };
+    },
+    parser: (result) => `Symbol: ${result.symbol}\nPrice: $${result.price.toLocaleString()}\nVolume: $${result.volume.toLocaleString()}\nSource: ${result.source}\nResponse Time: ${result.responseTime}ms`,
+  },
+  {
+    id: 'fetchSOLData',
+    label: 'Fetch SOL Data (Debug)',
+    category: 'phase3-diagnostics',
+    adminOnly: false,
+    mode: 'demo',
+    description: 'Fetch SOL market data with debug info (Demo mode - uses simulated data)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      return {
+        symbol: 'SOL',
+        price: 98.45,
+        volume: 2500000000,
+        source: 'Simulated Exchange Data',
+        responseTime: 198,
+      };
+    },
+    parser: (result) => `Symbol: ${result.symbol}\nPrice: $${result.price.toLocaleString()}\nVolume: $${result.volume.toLocaleString()}\nSource: ${result.source}\nResponse Time: ${result.responseTime}ms`,
+  },
+  {
+    id: 'runFlickerResponse',
+    label: 'Run Flicker Response',
+    category: 'phase3-diagnostics',
+    adminOnly: true,
+    mode: 'demo',
+    description: 'Test rapid response handling (Demo mode - Admin only)',
+    execute: async () => {
+      // Demo implementation - backend not yet implemented
+      interface ResponseData {
+        iteration: number;
+        timestamp: number;
+        latency: number;
+      }
+      
+      const responses: ResponseData[] = [];
+      for (let i = 0; i < 5; i++) {
+        responses.push({
+          iteration: i + 1,
+          timestamp: Date.now(),
+          latency: Math.floor(Math.random() * 100) + 50,
+        });
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return {
+        totalTests: responses.length,
+        avgLatency: responses.reduce((sum, r) => sum + r.latency, 0) / responses.length,
+        results: responses,
+      };
+    },
+    parser: (result) => `Total Tests: ${result.totalTests}\nAvg Latency: ${result.avgLatency.toFixed(2)}ms\nAll tests completed successfully`,
   },
 ];
 
 export const CATEGORY_LABELS = {
-  registration: 'USER REGISTRATION',
-  connectivity: 'CONNECTIVITY',
-  diagnostics: 'DIAGNOSTICS',
-  watchlist: 'WATCHLIST',
-  forecast: 'FORECAST',
-  alerts: 'ALERTS',
-  'test-suite': 'BACKEND TEST SUITE',
-  admin: 'ADMIN',
+  'phase1-market': 'PHASE 1: Market Data',
+  'phase1-symbols': 'PHASE 1: Symbol Management',
+  'phase1-registration': 'PHASE 1: User Registration',
+  'phase2-watchlist': 'PHASE 2: Watchlist',
+  'phase2-forecast': 'PHASE 2: Forecast Settings',
+  'phase2-alerts': 'PHASE 2: Alert Settings',
+  'phase3-admin': 'PHASE 3: Admin Functions',
+  'phase3-diagnostics': 'PHASE 3: Diagnostic Tools',
 };
 
 export const CATEGORY_COLORS = {
-  registration: 'emerald',
-  connectivity: 'cyan',
-  diagnostics: 'yellow',
-  watchlist: 'blue',
-  forecast: 'purple',
-  alerts: 'pink',
-  'test-suite': 'orange',
-  admin: 'red',
+  'phase1-market': 'cyan',
+  'phase1-symbols': 'cyan',
+  'phase1-registration': 'cyan',
+  'phase2-watchlist': 'emerald',
+  'phase2-forecast': 'emerald',
+  'phase2-alerts': 'emerald',
+  'phase3-admin': 'red',
+  'phase3-diagnostics': 'purple',
 };
 
-// Updated to always return all commands, regardless of admin status
+// Always return all commands, regardless of admin status
 export function getCommandsByCategory(category: string, _isAdmin: boolean) {
   return BACKEND_COMMANDS.filter((cmd) => cmd.category === category);
 }

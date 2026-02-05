@@ -1,68 +1,56 @@
 {
   "kind": "build_request",
-  "title": "Add emergency admin grant entrypoint and getAdminList canister method",
-  "priority": "normal",
+  "title": "Fix Backend Tester output scrolling and correct demo/live mode messaging",
+  "priority": "high",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "In `backend/main.mo`, add a public canister method named `emergencyGrantAdmin(user : Principal) : async ()` (shared) that enables granting permanent admin + user access to the specified principal so the user can run `dfx canister call itsron_crypto_backend emergencyGrantAdmin '(principal \"PRINCIPAL_FROM_STEP_1\")'` successfully.",
-      "target": "backend",
+      "text": "Fix the Backend Tester bottom output panel so it reliably scrolls (mouse wheel/trackpad, scrollbar drag, and touch) when command output exceeds the visible height, in both normal and maximized window states.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "recent-messages"
         ],
         "quotes": [
-          "dfx canister call itsron_crypto_backend emergencyGrantAdmin '(principal \"PRINCIPAL_FROM_STEP_1\")'\nIf that function doesn't exist, add this code to my main.mo file:\nmotokopublic shared func emergencyGrantAdmin(user : Principal) : async () {\n  AccessControl.grantPermission(accessControlState, user, #admin);\n  AccessControl.grantPermission(accessControlState, user, #user);\n};"
+          "the bottom panel is still not scrollin"
         ]
       },
       "acceptanceCriteria": [
-        "Calling `dfx canister call itsron_crypto_backend emergencyGrantAdmin '(principal \"<some-principal>\")'` succeeds (does not trap) when used for the intended bootstrap flow.",
-        "After calling `emergencyGrantAdmin` for a principal, that principal is recognized by backend authorization checks as both admin and user for subsequent calls."
+        "When the Backend Tester has enough output to overflow, the output area can be scrolled with mouse wheel/trackpad, scrollbar drag, and touch (where applicable).",
+        "Scrolling works in both windowState='normal' and windowState='maximized'.",
+        "The output panel does not get 'stuck' due to parent container overflow/height constraints; the output region remains the only scrollable region for output content.",
+        "Auto-scroll-to-bottom continues to work when the user is at the bottom; if the user scrolls up, new output does not force-scroll them back down until they return to bottom."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Ensure the emergency admin grant is *permanent* in the same sense as the app’s permanent admin concept: after `emergencyGrantAdmin` is used to bootstrap the operator, the backend must treat that principal as the single permanent admin and prevent re-binding permanent admin to a different principal via this emergency path.",
-      "target": "backend",
+      "text": "Update the Backend Tester UI and command definitions to stop showing a generic 'demo mode' message when live backend calls are being used; instead, accurately reflect live vs demo behavior based on the actual command implementation.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "recent-messages"
         ],
         "quotes": [
-          "This should give me permanent admin+user access so I can see real-time pricing."
+          "were still in demo mode even though the test are pulling live data"
         ]
       },
       "acceptanceCriteria": [
-        "If a permanent admin has already been set, `emergencyGrantAdmin` cannot be used to make a different principal the permanent admin.",
-        "After bootstrapping, the granted principal retains admin privileges after an upgrade (consistent with the permanent admin behavior)."
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "text": "Add a public canister method named `getAdminList` that returns the admin principal list, so the user can run `dfx canister call itsron_crypto_backend getAdminList` exactly as written.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-4"
-        ],
-        "quotes": [
-          "Verify I'm now permanently an admin:\n\nbashdfx canister call itsron_crypto_backend getAdminList"
-        ]
-      },
-      "acceptanceCriteria": [
-        "`dfx canister call itsron_crypto_backend getAdminList` returns an array of principals that includes the bootstrapped principal after `emergencyGrantAdmin` is called.",
-        "`getAdminList` is protected so only an admin can call it successfully (non-admin callers should be rejected)."
+        "The note/banner text in the Backend Tester no longer implies the entire tester is in demo mode when at least some commands are live backend calls.",
+        "Commands that call the canister (use the actor) are clearly indicated as Live, and commands that return mock data are clearly indicated as Demo (either via label/badge/description).",
+        "Text is consistent between the command list and the informational note (no contradictions like 'demo mode' while running live calls).",
+        "No user-facing text mentions Kraken/API sources that are not actually being used by the command implementation (e.g., remove or correct 'Kraken API' in demo placeholders if it confuses live status)."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single-actor Motoko canister; keep all logic in `backend/main.mo`.",
-    "Use English for any user-facing text added as part of these changes.",
-    "Do not edit any frontend files under `frontend/immutablePaths`."
+    "Do not modify any files under frontend/src/components/ui (read-only).",
+    "Do not modify frontend immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx.",
+    "Backend must remain single-actor in backend/main.mo; only add migration.mo if persistent state schema changes are required."
   ],
   "nonGoals": [
-    "Do not redesign or expand the frontend UI/UX for admin management beyond what is required to support the requested `dfx` calls.",
-    "Do not implement additional CoinGecko parsing/fetch fixes as part of this request (only ensure the admin bootstrapping and admin-list verification functions exist and work)."
+    "Implementing full watchlist/forecast/alerts crypto backend features beyond what is needed for accurate tester messaging.",
+    "Adding new authentication providers beyond Internet Identity.",
+    "Adding real-time/WebSocket streaming."
   ],
   "imageRequirements": {
     "required": [],

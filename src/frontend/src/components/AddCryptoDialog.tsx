@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Loader2 } from 'lucide-react';
+import { Plus, AlertCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -9,51 +9,14 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import { useGetValidSymbols, useAddCryptoToWatchlist } from '../hooks/useQueries';
-import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function AddCryptoDialog() {
   const [open, setOpen] = useState(false);
-  const [selectedSymbol, setSelectedSymbol] = useState<string>('');
-
-  const { data: validSymbols, isLoading: symbolsLoading } = useGetValidSymbols();
-  const addMutation = useAddCryptoToWatchlist();
-
-  const handleAdd = async () => {
-    if (!selectedSymbol) {
-      toast.error('Please select a cryptocurrency');
-      return;
-    }
-
-    try {
-      await addMutation.mutateAsync(selectedSymbol);
-      toast.success(`${selectedSymbol} added to your watchlist`);
-      setSelectedSymbol('');
-      setOpen(false);
-    } catch (error: any) {
-      const errorMessage = error?.message || 'Failed to add cryptocurrency';
-      toast.error(errorMessage);
-    }
-  };
-
-  const handleOpenChange = (newOpen: boolean) => {
-    setOpen(newOpen);
-    if (!newOpen) {
-      setSelectedSymbol('');
-    }
-  };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button className="gap-2">
           <Plus className="h-4 w-4" />
@@ -68,51 +31,21 @@ export default function AddCryptoDialog() {
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="crypto-select">Cryptocurrency</Label>
-            {symbolsLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading symbols...
-              </div>
-            ) : (
-              <Select value={selectedSymbol} onValueChange={setSelectedSymbol}>
-                <SelectTrigger id="crypto-select">
-                  <SelectValue placeholder="Select a cryptocurrency" />
-                </SelectTrigger>
-                <SelectContent>
-                  {validSymbols?.map(([displaySymbol, symbolPair]) => (
-                    <SelectItem key={displaySymbol} value={displaySymbol}>
-                      {displaySymbol}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
-          </div>
+          <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
+            <AlertCircle className="h-4 w-4 text-amber-500" />
+            <AlertTitle className="text-amber-700 dark:text-amber-400">Feature Not Available</AlertTitle>
+            <AlertDescription className="text-sm">
+              Backend crypto functionality is not yet implemented. This feature will be available once the backend is updated.
+            </AlertDescription>
+          </Alert>
         </div>
         <DialogFooter>
           <Button
             type="button"
             variant="outline"
-            onClick={() => handleOpenChange(false)}
-            disabled={addMutation.isPending}
+            onClick={() => setOpen(false)}
           >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={handleAdd}
-            disabled={!selectedSymbol || addMutation.isPending || symbolsLoading}
-          >
-            {addMutation.isPending ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Adding...
-              </>
-            ) : (
-              'Add to Watchlist'
-            )}
+            Close
           </Button>
         </DialogFooter>
       </DialogContent>

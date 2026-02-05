@@ -27,7 +27,7 @@ export function useActorEnhanced(): UseActorEnhancedReturn {
     const { identity, clear, login } = useInternetIdentity();
     const [error, setError] = useState<Error | null>(null);
     const [timeoutError, setTimeoutError] = useState(false);
-    const [adminInitError, setAdminInitError] = useState<string | null>(null);
+    const [adminInitError] = useState<string | null>(null);
     
     // Determine if authenticated (identity exists AND is not anonymous)
     const hasIdentity = !!identity;
@@ -55,25 +55,6 @@ export function useActorEnhanced(): UseActorEnhancedReturn {
         return () => clearTimeout(timeout);
     }, [isFetching, actor]);
 
-    // Check for admin initialization errors by attempting to fetch admin error message
-    useEffect(() => {
-        const checkAdminInitError = async () => {
-            if (actor && isAuthenticated && adminInitAttempted) {
-                try {
-                    // Try to get admin initialization error message from backend
-                    const errorMsg = await actor.getAdminInitializationErrorMessage();
-                    setAdminInitError(errorMsg);
-                } catch (err) {
-                    // If we can't fetch the error message, it might mean we're not admin
-                    // or the backend doesn't support this yet - don't set an error
-                    setAdminInitError(null);
-                }
-            }
-        };
-
-        checkAdminInitError();
-    }, [actor, isAuthenticated, adminInitAttempted]);
-
     // Determine current stage for diagnostics
     let stage: UseActorEnhancedReturn['diagnostics']['stage'] = 'idle';
     if (error || timeoutError) {
@@ -89,7 +70,6 @@ export function useActorEnhanced(): UseActorEnhancedReturn {
         console.log('🔄 Retrying connection...');
         setError(null);
         setTimeoutError(false);
-        setAdminInitError(null);
         try {
             await clear();
             setTimeout(() => {
@@ -106,7 +86,6 @@ export function useActorEnhanced(): UseActorEnhancedReturn {
         console.log('🔄 Retrying admin initialization...');
         setError(null);
         setTimeoutError(false);
-        setAdminInitError(null);
         
         // Force a full re-authentication to retry admin init
         try {

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Terminal, RefreshCw, CheckCircle2, XCircle, Lock, Minimize2, Maximize2, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useInternetIdentity } from '../hooks/useInternetIdentity';
 import { useIsAdmin } from '../hooks/useQueries';
@@ -32,11 +31,14 @@ export default function SimulatedBashPanel({ onClose, isLimitedMode = false }: S
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [hasShownReconnectToast, setHasShownReconnectToast] = useState(false);
   const [windowState, setWindowState] = useState<WindowState>('normal');
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const outputContainerRef = useRef<HTMLDivElement>(null);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
 
   const isAuthenticated = !!identity;
   const isActorReady = !!actor && !isFetching;
   const isError = !actor && !isFetching && isAuthenticated;
+  
+  // Admin access is true ONLY when backend confirms admin AND we're not in limited mode
   const hasAdminAccess = isAdmin === true && !isLimitedMode;
 
   // Monitor for connection errors and trigger controlled reconnection with exponential backoff
@@ -91,15 +93,27 @@ export default function SimulatedBashPanel({ onClose, isLimitedMode = false }: S
     }
   }, [reconnecting, hasShownReconnectToast]);
 
-  // Auto-scroll to bottom when new output is added
+  // Auto-scroll to bottom when new output is added (only if user is not manually scrolling)
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
+    if (outputContainerRef.current && !isUserScrolling) {
+      outputContainerRef.current.scrollTop = outputContainerRef.current.scrollHeight;
     }
-  }, [outputs]);
+  }, [outputs, isUserScrolling]);
+
+  // Detect when user scrolls manually
+  useEffect(() => {
+    const container = outputContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isAtBottom = Math.abs(scrollHeight - clientHeight - scrollTop) < 10;
+      setIsUserScrolling(!isAtBottom);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const addOutput = (command: string, output: string, status: 'success' | 'error' | 'running') => {
     const timestamp = new Date().toLocaleTimeString();
@@ -197,7 +211,16 @@ export default function SimulatedBashPanel({ onClose, isLimitedMode = false }: S
     ? 'error'
     : 'connecting';
 
-  const categories = ['registration', 'connectivity', 'diagnostics', 'watchlist', 'forecast', 'alerts', 'test-suite', 'admin'] as const;
+  const categories = [
+    'phase1-market',
+    'phase1-symbols',
+    'phase1-registration',
+    'phase2-watchlist',
+    'phase2-forecast',
+    'phase2-alerts',
+    'phase3-admin',
+    'phase3-diagnostics',
+  ] as const;
 
   // Minimized state
   if (windowState === 'minimized') {
@@ -232,15 +255,11 @@ export default function SimulatedBashPanel({ onClose, isLimitedMode = false }: S
   // Normal and Maximized states
   const containerClasses = windowState === 'maximized'
     ? 'fixed inset-4 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl z-50 flex flex-col'
-    : 'fixed bottom-4 right-4 w-full max-w-4xl bg-gray-900 border border-gray-700 rounded-lg shadow-2xl z-50 flex flex-col';
-
-  const containerStyle = windowState === 'maximized'
-    ? {}
-    : { maxHeight: '85vh' };
+    : 'fixed bottom-4 right-4 w-full max-w-6xl h-[90vh] bg-gray-900 border border-gray-700 rounded-lg shadow-2xl z-50 flex flex-col';
 
   return (
     <TooltipProvider>
-      <div className={containerClasses} style={containerStyle}>
+      <div className={containerClasses}>
         <div className="flex items-center justify-between p-4 border-b border-gray-700 flex-shrink-0">
           <div className="flex items-center gap-2">
             <Terminal className="w-5 h-5 text-green-400" />
@@ -306,8 +325,9 @@ export default function SimulatedBashPanel({ onClose, isLimitedMode = false }: S
           </div>
         </div>
 
-        <div className="p-4 space-y-4 flex-1 overflow-hidden flex flex-col min-h-0">
-          <div className="space-y-4 overflow-y-auto flex-shrink-0" style={{ maxHeight: windowState === 'maximized' ? '40vh' : '35vh' }}>
+        <div className="flex-1 min-h-0 flex flex-col p-4 gap-4">
+          {/* Commands Section - Scrollable */}
+          <div className="flex-shrink-0 overflow-y-auto space-y-4" style={{ maxHeight: '45%' }}>
             {/* Connection Status Alert */}
             {connectionStatus !== 'connected' && (
               <div
@@ -350,8 +370,8 @@ export default function SimulatedBashPanel({ onClose, isLimitedMode = false }: S
 
               return (
                 <div key={category}>
-                  <h4 className={`text-sm font-semibold text-${color}-400 mb-2 flex items-center gap-2`}>
-                    <span className={`w-2 h-2 bg-${color}-400 rounded-full`}></span>
+                  <h4 className={`text-sm font-semibold mb-2 flex items-center gap-2`} style={{ color: `var(--${color}-400, #22d3ee)` }}>
+                    <span className={`w-2 h-2 rounded-full`} style={{ backgroundColor: `var(--${color}-400, #22d3ee)` }}></span>
                     {label}
                   </h4>
                   <div className="grid grid-cols-3 gap-2">
@@ -392,9 +412,8 @@ export default function SimulatedBashPanel({ onClose, isLimitedMode = false }: S
             {/* Info Panels */}
             <div className="bg-blue-900/20 border border-blue-700/50 rounded p-3">
               <p className="text-xs text-blue-400">
-                <strong>Automatic Reconnection:</strong> If the backend connection is lost, the system will
-                automatically attempt to reconnect with exponential backoff (max 3 attempts). Commands will
-                reinitialize dynamically once the connection is restored.
+                <strong>Note:</strong> Some commands call live backend methods (user profile, role management, admin checks). 
+                Crypto-related commands use demo data as the backend crypto functionality is not yet fully implemented.
               </p>
             </div>
 
@@ -412,44 +431,51 @@ export default function SimulatedBashPanel({ onClose, isLimitedMode = false }: S
               <div className="bg-emerald-900/20 border border-emerald-700/50 rounded p-3">
                 <p className="text-xs text-emerald-400">
                   <strong>Admin Access Granted:</strong> You have full access to all diagnostic and test commands,
-                  including the complete Backend Test Suite for comprehensive validation.
+                  including admin role management for comprehensive validation.
                 </p>
               </div>
             )}
           </div>
 
-          <div className="flex-1 min-h-0 bg-black rounded overflow-hidden">
-            <ScrollArea className="h-full w-full" ref={scrollAreaRef}>
-              <div className="p-4 font-mono text-sm space-y-4 min-w-max">
-                {outputs.length === 0 ? (
-                  <p className="text-gray-500">
-                    {isActorReady
-                      ? isLimitedMode 
-                        ? 'Limited mode active. Click a non-admin command above to test backend methods. Admin commands are visible but locked.'
-                        : 'No commands executed yet. Click a button above to test backend methods.'
-                      : 'Waiting for backend connection... Commands will be available once connected.'}
-                  </p>
-                ) : (
-                  outputs.map((output, index) => (
-                    <div key={index} className="space-y-1">
-                      <div className="text-blue-400">$ {output.command}</div>
-                      <div
-                        className={
-                          output.status === 'success'
-                            ? 'text-green-400'
-                            : output.status === 'error'
-                            ? 'text-red-400'
-                            : 'text-yellow-400'
-                        }
-                      >
-                        <pre className="whitespace-pre-wrap break-words">{output.output}</pre>
-                      </div>
-                      <div className="text-gray-600 text-xs">[{output.timestamp}]</div>
+          {/* Output Section - Scrollable */}
+          <div 
+            ref={outputContainerRef}
+            className="flex-1 min-h-0 bg-black rounded overflow-y-auto overscroll-contain touch-pan-y"
+            style={{ 
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#4B5563 #1F2937',
+              WebkitOverflowScrolling: 'touch'
+            }}
+          >
+            <div className="p-4 font-mono text-sm space-y-4">
+              {outputs.length === 0 ? (
+                <p className="text-gray-500">
+                  {isActorReady
+                    ? isLimitedMode 
+                      ? 'Limited mode active. Click a non-admin command above to test backend methods. Admin commands are visible but locked.'
+                      : 'No commands executed yet. Click a button above to test backend methods.'
+                    : 'Waiting for backend connection... Commands will be available once connected.'}
+                </p>
+              ) : (
+                outputs.map((output, index) => (
+                  <div key={index} className="space-y-1">
+                    <div className="text-blue-400">$ {output.command}</div>
+                    <div
+                      className={
+                        output.status === 'success'
+                          ? 'text-green-400'
+                          : output.status === 'error'
+                          ? 'text-red-400'
+                          : 'text-yellow-400'
+                      }
+                    >
+                      <pre className="whitespace-pre-wrap break-words">{output.output}</pre>
                     </div>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
+                    <div className="text-gray-600 text-xs">[{output.timestamp}]</div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </div>

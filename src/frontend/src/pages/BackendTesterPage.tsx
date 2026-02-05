@@ -47,7 +47,7 @@ export default function BackendTesterPage({ onNavigateToDashboard }: BackendTest
           <h1 className="text-3xl font-bold tracking-tight">Backend Tester</h1>
           <p className="text-muted-foreground mt-1">
             {hasAdminAccess 
-              ? 'Diagnostic console for backend operations and testing'
+              ? 'Diagnostic console for backend operations and testing with live canister calls'
               : 'Limited diagnostic console - some commands require admin privileges'}
           </p>
         </div>

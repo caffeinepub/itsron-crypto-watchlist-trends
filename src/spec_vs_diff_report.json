@@ -1,46 +1,48 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-04T15:04:37.722Z",
-  "summary": "Based on the provided (truncated) diff summary, there is no visible evidence that the requested new backend canister methods (`emergencyGrantAdmin` and `getAdminList`) were added to `backend/main.mo`, nor that permanence/one-time binding behavior was implemented. Additionally, `project_state.json` was modified even though the request was exclusively about backend canister methods and constraints did not mention changing project metadata.",
+  "generatedAt": "2026-02-05T15:58:11.726Z",
+  "summary": "Diff partially addresses Backend Tester behavior by adding scroll/auto-scroll state in SimulatedBashPanel and introducing a per-command `mode: 'live' | 'demo'` field in backendTesterCommands, but the provided changes do not clearly implement the full scrolling acceptance criteria or the required accurate live-vs-demo user-facing messaging.",
   "missing_requirements": [
     {
       "id": "REQ-1",
-      "requirement": "Add a public shared canister method `emergencyGrantAdmin(user : Principal) : async ()` in `backend/main.mo` that grants permanent admin + user access to the specified principal.",
-      "reason": "The diff excerpt for `backend/main.mo` does not show any definition of `emergencyGrantAdmin`, nor any related logic wiring it into authorization checks.",
+      "requirement": "Fix the Backend Tester bottom output panel so it reliably scrolls (mouse wheel/trackpad, scrollbar drag, and touch) when command output exceeds the visible height, in both normal and maximized window states; ensure output panel doesn't get stuck due to parent overflow/height constraints; maintain auto-scroll-to-bottom only when user is at bottom.",
+      "reason": "The diff shows new refs/state and an auto-scroll effect, but does not show any concrete container styling/structure changes (e.g., overflow/height constraints) needed to guarantee wheel/drag/touch scrolling in both normal and maximized states, and the auto-scroll logic is truncated so the 'only when at bottom' behavior cannot be verified from the summary.",
       "evidence": [
-        "backend/main.mo (truncated diff does not show emergencyGrantAdmin)"
+        "frontend/src/components/SimulatedBashPanel.tsx (truncated)"
       ]
     },
     {
       "id": "REQ-2",
-      "requirement": "Make the emergency grant permanent like the app’s permanent admin concept, and prevent re-binding permanent admin to a different principal via the emergency path; privileges persist after upgrade.",
-      "reason": "The diff excerpt does not show any new logic enforcing one-time binding through `emergencyGrantAdmin`, nor persistence/upgrade-safe state changes tied to this emergency path.",
+      "requirement": "Update the Backend Tester UI and command definitions so messaging accurately reflects live vs demo behavior; clearly indicate which commands are Live vs Demo; ensure banner/note and command list are consistent; remove misleading API-source mentions.",
+      "reason": "While a `mode` field was added to `CommandDefinition`, the shown commands are still marked `mode: 'demo'` with descriptions like \"Demo mode - uses simulated data\" and there is no evidence in the diff summary of Backend Tester UI banner/note text being updated to avoid generic 'demo mode' messaging or to display Live/Demo indicators consistently in the command list.",
       "evidence": [
-        "backend/main.mo (truncated diff provides no evidence of emergencyGrantAdmin permanence/rebind prevention logic)"
-      ]
-    },
-    {
-      "id": "REQ-3",
-      "requirement": "Add a public canister method `getAdminList` (callable exactly as `dfx canister call itsron_crypto_backend getAdminList`) that returns the admin principal list and is admin-protected.",
-      "reason": "The diff excerpt for `backend/main.mo` does not show any definition of `getAdminList` or authorization gating for it.",
-      "evidence": [
-        "backend/main.mo (truncated diff does not show getAdminList)"
+        "frontend/src/utils/backendTesterCommands.ts (truncated)",
+        "frontend/src/components/SimulatedBashPanel.tsx (truncated)"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Modified `project_state.json` project metadata/feature summary.",
-      "reason": "The BuildRequest focuses on adding backend canister methods in `backend/main.mo` and includes constraints about keeping backend logic in that file; it does not request or require updating project metadata/state files.",
+      "description": "Connection monitoring with controlled reconnection attempts (exponential backoff), system outputs, and toast notifications for backend reconnection state in the Backend Tester.",
+      "reason": "The BuildRequest focuses on output scrolling and accurate live-vs-demo messaging; reconnection/backoff/toast behavior is not requested.",
       "evidence": [
-        "project_state.json (modified)"
+        "frontend/src/components/SimulatedBashPanel.tsx (truncated)"
+      ]
+    },
+    {
+      "description": "Admin-access gating logic commentary/behavior changes in the Backend Tester (e.g., 'Admin access is true ONLY when backend confirms admin AND we're not in limited mode').",
+      "reason": "Not part of the requested scrolling or demo/live messaging fixes.",
+      "evidence": [
+        "frontend/src/components/SimulatedBashPanel.tsx (truncated)"
       ]
     }
   ],
   "confidence": 0.62,
   "changed_files": [
-    "backend/main.mo",
+    "frontend-file-summaries.txt",
+    "frontend/src/components/SimulatedBashPanel.tsx",
+    "frontend/src/utils/backendTesterCommands.ts",
     "project_state.json"
   ]
 }

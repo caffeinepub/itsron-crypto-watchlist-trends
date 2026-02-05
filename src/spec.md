@@ -1,12 +1,14 @@
 # Specification
 
 ## Summary
-**Goal:** Add backend-only admin bootstrapping and admin verification canister methods callable via `dfx`.
+**Goal:** Make the Backend Tester output panel reliably scrollable and correct the UI messaging so it accurately reflects which commands are live vs demo.
 
 **Planned changes:**
-- In `backend/main.mo`, add a public shared canister method `emergencyGrantAdmin(user : Principal) : async ()` to grant the specified principal both `admin` and `user` permissions for bootstrap.
-- Ensure `emergencyGrantAdmin` binds the permanent admin only once: if a permanent admin is already set, prevent using this method to make a different principal the permanent admin.
-- Add a public canister method `getAdminList` that returns the list of admin principals.
-- Protect `getAdminList` so only admins can call it successfully.
+- Fix the Backend Tester bottom output panel scrolling so overflow output can be scrolled via mouse wheel/trackpad, scrollbar drag, and touch, in both normal and maximized window states.
+- Ensure the output area is the intended scroll container (avoid parent overflow/height constraints that prevent scrolling).
+- Preserve auto-scroll behavior: keep auto-scrolling only when the user is at the bottom; do not force-scroll when the user scrolls up until they return to bottom.
+- Update Backend Tester informational text and command definitions to remove misleading “demo mode” wording when live backend calls are used.
+- Clearly indicate per-command status (Live for actor/canister calls, Demo for mock-returning commands) and keep wording consistent between the command list and any banner/note.
+- Remove or correct any user-facing references to API sources (e.g., “Kraken API”) that are not actually used by the command implementation.
 
-**User-visible outcome:** The operator can run `dfx canister call itsron_crypto_backend emergencyGrantAdmin '(principal "<principal>")'` to bootstrap permanent admin+user access, and then run `dfx canister call itsron_crypto_backend getAdminList` (as an admin) to verify the principal is in the admin list.
+**User-visible outcome:** The Backend Tester output panel scrolls reliably in all window states, and the tester clearly shows which commands are Live vs Demo without contradictory or misleading “demo mode” messaging.

@@ -1,12 +1,9 @@
 import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { useGetLiveMarketData } from '../hooks/useQueries';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Loader2, Info } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
+import { TrendingUp, TrendingDown, Info } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { LiveMarketResponse } from '../backend';
 
 interface ForecastChartProps {
   symbol: string;
@@ -20,8 +17,6 @@ interface ChartDataPoint {
   actual?: number;
   predicted?: number;
   movingAverage?: number;
-  exponentialSmoothing?: number;
-  currentPrice?: number;
 }
 
 interface HistoricalDataPoint {
@@ -34,11 +29,6 @@ export default function ForecastChart({
   movingAveragePeriod = 7,
   forecastHorizon = 5 
 }: ForecastChartProps) {
-  const { data: liveData, isLoading: liveDataLoading } = useGetLiveMarketData(symbol);
-
-  // Explicitly type the data to avoid inference issues
-  const typedLiveData = liveData as LiveMarketResponse | null | undefined;
-
   // Generate mock historical data for demonstration
   const historicalData = useMemo(() => {
     const now = Date.now();
@@ -93,13 +83,6 @@ export default function ForecastChart({
       return sum / movingAveragePeriod;
     });
 
-    // Calculate exponential smoothing (alpha = 0.3)
-    const alpha = 0.3;
-    const exponentialSmoothing: (number | null)[] = [priceValues[0]];
-    for (let i = 1; i < priceValues.length; i++) {
-      exponentialSmoothing[i] = alpha * priceValues[i] + (1 - alpha) * exponentialSmoothing[i - 1]!;
-    }
-
     // Create chart data with actual values
     const data: ChartDataPoint[] = prices.map((entry, i) => ({
       timestamp: entry.timestamp,
@@ -110,7 +93,6 @@ export default function ForecastChart({
       actual: entry.price,
       predicted: slope * i + intercept,
       movingAverage: movingAverages[i] || undefined,
-      exponentialSmoothing: exponentialSmoothing[i] || undefined,
     }));
 
     // Add future predictions based on forecastHorizon
@@ -121,7 +103,6 @@ export default function ForecastChart({
 
     // Get last values for each method
     const lastMA = movingAverages[movingAverages.length - 1] || priceValues[priceValues.length - 1];
-    const lastES = exponentialSmoothing[exponentialSmoothing.length - 1] || priceValues[priceValues.length - 1];
 
     for (let i = 1; i <= forecastHorizon; i++) {
       const futureTimestamp = lastTimestamp + avgTimeDiff * i;
@@ -132,20 +113,10 @@ export default function ForecastChart({
           day: 'numeric',
         }),
         predicted: slope * (n - 1 + i) + intercept,
+        movingAverage: lastMA,
       };
 
-      // For moving average, use the last calculated value (flat projection)
-      futurePoint.movingAverage = lastMA;
-
-      // For exponential smoothing, continue the smoothing with last actual price
-      futurePoint.exponentialSmoothing = lastES;
-
       data.push(futurePoint);
-    }
-
-    // Add current live price as reference
-    if (typedLiveData?.price && typedLiveData.price > 0) {
-      data[data.length - 1].currentPrice = typedLiveData.price;
     }
 
     // Calculate statistics
@@ -165,7 +136,7 @@ export default function ForecastChart({
         dataPoints: n,
       },
     };
-  }, [historicalData, typedLiveData, movingAveragePeriod, forecastHorizon]);
+  }, [historicalData, movingAveragePeriod, forecastHorizon]);
 
   const formatPrice = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -217,23 +188,6 @@ export default function ForecastChart({
     );
   };
 
-  if (liveDataLoading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Forecast Chart</CardTitle>
-          <CardDescription>Loading data...</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          </div>
-          <Skeleton className="h-[400px] w-full" />
-        </CardContent>
-      </Card>
-    );
-  }
-
   if (historicalData.length < 2) {
     return (
       <Card>
@@ -246,7 +200,7 @@ export default function ForecastChart({
             <Info className="h-4 w-4 text-amber-500" />
             <AlertTitle className="text-amber-700 dark:text-amber-400">Demo Data</AlertTitle>
             <AlertDescription className="text-sm">
-              This chart displays demonstration data. Historical price data from CoinGecko API will be integrated in the backend.
+              This chart displays demonstration data. Backend crypto functionality is not yet implemented.
             </AlertDescription>
           </Alert>
         </CardContent>
@@ -261,7 +215,7 @@ export default function ForecastChart({
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <div className="flex items-center gap-2">
-                <CardTitle>Statistical Forecast</CardTitle>
+                <CardTitle>BTC Analysis</CardTitle>
               </div>
               <CardDescription>
                 Linear regression analysis based on {stats!.dataPoints} days of demonstration data
@@ -317,7 +271,8 @@ export default function ForecastChart({
                   stroke="oklch(0.75 0.25 145)"
                   strokeWidth={2}
                   dot={false}
-                  name="Historical Price"
+                  activeDot={false}
+                  name="Price"
                   connectNulls
                 />
                 <Line
@@ -327,7 +282,8 @@ export default function ForecastChart({
                   strokeWidth={2}
                   strokeDasharray="5 5"
                   dot={false}
-                  name="Linear Regression"
+                  activeDot={false}
+                  name="Regression"
                 />
                 <Line
                   type="monotone"
@@ -335,27 +291,10 @@ export default function ForecastChart({
                   stroke="oklch(0.70 0.20 50)"
                   strokeWidth={2}
                   dot={false}
+                  activeDot={false}
                   name={`Moving Average (${movingAveragePeriod})`}
                   connectNulls
                 />
-                <Line
-                  type="monotone"
-                  dataKey="exponentialSmoothing"
-                  stroke="hsl(var(--chart-4))"
-                  strokeWidth={2}
-                  strokeDasharray="5 5"
-                  dot={false}
-                  name="Exponential Smoothing"
-                  connectNulls
-                />
-                {typedLiveData?.price && typedLiveData.price > 0 && (
-                  <ReferenceLine
-                    y={typedLiveData.price}
-                    stroke="hsl(var(--chart-5))"
-                    strokeDasharray="3 3"
-                    label={{ value: 'Live Price', position: 'right', fill: 'hsl(var(--chart-5))' }}
-                  />
-                )}
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -391,7 +330,7 @@ export default function ForecastChart({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Data Source:</span>
-                <span className="font-mono text-xs">Demo (CoinGecko API pending)</span>
+                <span className="font-mono text-xs">Demo (Backend pending)</span>
               </div>
             </div>
           </div>

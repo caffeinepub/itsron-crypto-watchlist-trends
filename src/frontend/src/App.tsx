@@ -30,10 +30,11 @@ function AppContent() {
   const { actor, isFetching: actorFetching, isError: actorError, error: actorErrorMessage, retry: retryActor, diagnostics } = useActorEnhanced();
   const [currentView, setCurrentView] = useState<'dashboard' | 'backend-tester' | 'pending'>('pending');
 
-  // Check if identity is ready (non-anonymous)
-  const isAuthenticated = identity && !identity.getPrincipal().isAnonymous();
+  // CRITICAL: Check if identity is ready AND non-anonymous
+  // Only after initialization completes can we determine if user is truly authenticated
+  const isAuthenticated = !isInitializing && identity && !identity.getPrincipal().isAnonymous();
 
-  // Query user profile
+  // Query user profile - only enabled after initialization completes
   const { data: userProfile, isLoading: profileLoading, isFetched: profileFetched } = useGetCallerUserProfile();
 
   // Determine if we should show profile setup
@@ -94,7 +95,8 @@ function AppContent() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Show loading during initialization
+  // CRITICAL: Show loading during Internet Identity initialization/rehydration
+  // This prevents any anonymous/limited state from flashing on screen
   if (isInitializing) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
@@ -151,6 +153,7 @@ function AppContent() {
   }
 
   // Show authenticated app with connection bootstrapper
+  // Only render after initialization completes and user is authenticated
   if (isAuthenticated) {
     return (
       <ConnectionBootstrapper
@@ -178,7 +181,7 @@ function AppContent() {
     );
   }
 
-  // Show login prompt for unauthenticated users
+  // Show login prompt for unauthenticated users (after initialization completes)
   return <LoginPrompt />;
 }
 
