@@ -1,73 +1,157 @@
 {
   "kind": "build_request",
-  "title": "Fix backend connection stalling after cache clears and improve Watchlist live tick error messaging",
+  "title": "Replace Add Crypto placeholder with live searchable Symbol Picker backed by validSymbols + watchlist mutations",
   "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-28",
-      "text": "Fix the frontend backend-connection bootstrap flow so the app cannot remain indefinitely stuck on “Connecting to backend” after browser cache/cookies/storage are cleared and the cached backend canister ID is missing; the app must either (a) successfully re-discover/recreate the backend actor, or (b) surface a clear actionable error state with recovery actions.",
-      "target": "frontend",
+      "id": "REQ-31",
+      "text": "Expose the backend coin directory used by the frontend by implementing a `validSymbols` map in `backend/main.mo` and a user-accessible method to read it (e.g., `getValidSymbols()`), so the frontend can fetch the list directly from the backend rather than using hard-coded/demo data.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-3"
         ],
         "quotes": [
-          "can I get this fixed as well"
+          "Fetch the data directly from my validSymbols backend map."
         ]
       },
       "acceptanceCriteria": [
-        "After clearing site data (cache/cookies/storage) and reloading while authenticated with Internet Identity, the app progresses out of the connecting state without requiring manual developer intervention.",
-        "If the backend actor cannot be created due to missing/invalid configuration (including missing canister ID), the user sees an English error screen (not an infinite spinner) within 45 seconds with actionable buttons (Retry Connection, Re-authenticate, Refresh Page).",
-        "The error screen includes enough diagnostic detail (via the existing ConnectionDetails panel) to confirm whether actor creation was attempted and why it failed.",
-        "Retry actions actually trigger a new actor-creation attempt (not just re-rendering the same idle state)."
+        "`backend/main.mo` contains a `validSymbols` map that represents the backend’s supported symbol directory.",
+        "A public backend method exists that returns the contents of `validSymbols` to authenticated users (same permission level as other user calls like `getLiveMarketData`).",
+        "If the caller is not authorized as a user, the method traps with an authorization error consistent with existing backend patterns.",
+        "The returned data is deterministic and suitable to render as a list in the frontend (no placeholder/empty hard-coded response)."
       ]
     },
     {
-      "id": "REQ-29",
-      "text": "Harden the actor initialization hook so it reliably reports errors when actor creation fails (including missing canister ID / misconfiguration) instead of silently staying in an idle/loading state, and ensure the error is propagated to the existing connection UI (ConnectionBootstrapper / ConnectionDetails).",
-      "target": "frontend",
+      "id": "REQ-32",
+      "text": "Implement backend watchlist persistence and mutations in `backend/main.mo` by adding a per-user watchlist store and an authenticated backend method `addCryptoToWatchlist(symbol : CryptoSymbol)` that adds a selected symbol to the caller’s watchlist.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-3"
         ],
         "quotes": [
-          "can I get this fixed as well"
+          "Once I select a coin, it should call the addCryptoToWatchlist backend function and immediately update my dashboard."
         ]
       },
       "acceptanceCriteria": [
-        "When actor creation fails, the failure is exposed as a real Error (with a meaningful English message) that is shown by ConnectionBootstrapper.",
-        "The diagnostics stage reported by useActorEnhanced transitions to 'error' when actor creation fails, rather than remaining 'idle' indefinitely.",
-        "There is no state where the user is authenticated, but the app remains in a non-progressing 'idle' connection stage without either creating an actor or showing an error."
+        "`backend/main.mo` exposes `addCryptoToWatchlist(symbol : CryptoSymbol)` as a shared method callable by authenticated users.",
+        "The watchlist is stored per-caller Principal in canister state and survives page refreshes (within the same deployed canister state).",
+        "Adding the same symbol multiple times does not create duplicates (idempotent behavior).",
+        "If a symbol is not present in the backend `validSymbols` map, `addCryptoToWatchlist` returns or traps with a clear English error indicating the symbol is invalid/unsupported."
       ]
     },
     {
-      "id": "REQ-30",
-      "text": "Improve Watchlist live price tick row error messaging for cycle-exhaustion failures so it is user-understandable and consistent with the dashboard’s cycle error handling: when the live market data request fails with an IC rejection containing 'out of cycles' / IC0504 (or equivalent), show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
-      "target": "frontend",
+      "id": "REQ-33",
+      "text": "Implement a backend watchlist read endpoint in `backend/main.mo` (e.g., `getWatchlist() : async [CryptoSymbol]`) so the frontend can render the user’s current selections and refresh the dashboard after mutations.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-3"
         ],
         "quotes": [
-          "can I get this fixed as well"
+          "...and immediately update my dashboard."
         ]
       },
       "acceptanceCriteria": [
-        "In frontend/src/components/WatchlistPriceTickRow.tsx, cycle-exhaustion errors no longer display the generic 'Service unavailable' text; instead they display an English message that explicitly mentions the backend being out of cycles and that live data is temporarily unavailable until cycles are topped up.",
-        "Non-cycle errors continue to show a non-misleading generic error state (e.g., 'Error loading'), distinct from the cycle-specific message.",
-        "The tick rows still render successfully for symbols whose requests succeed, and failure messaging is isolated per row (one failing symbol does not break the whole list)."
+        "A public backend method exists that returns the caller’s current watchlist as an array of `CryptoSymbol`.",
+        "The method is callable only by authenticated users (consistent authorization approach with existing methods).",
+        "For a new user with no stored watchlist, the method returns an empty list (not a trap)."
+      ]
+    },
+    {
+      "id": "REQ-34",
+      "text": "Replace the stubbed React Query hooks in `frontend/src/hooks/useQueries.ts` with live implementations that call the backend for (1) fetching valid symbols, (2) fetching the caller’s watchlist, and (3) adding a symbol to the watchlist, and ensure they only run when the backend actor is available and Internet Identity initialization has completed.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-3"
+        ],
+        "quotes": [
+          "Fetch the data directly from my validSymbols backend map.",
+          "Once I select a coin, it should call the addCryptoToWatchlist backend function and immediately update my dashboard."
+        ]
+      },
+      "acceptanceCriteria": [
+        "`useGetValidSymbols` is enabled (not `enabled: false`) and calls the backend method that returns `validSymbols`.",
+        "`useGetWatchlist` is enabled (not `enabled: false`) and calls the backend watchlist read method.",
+        "`useAddCryptoToWatchlist` calls the backend `addCryptoToWatchlist` method and, on success, invalidates the `watchlist` query (and any other relevant dashboard queries that should reflect the change).",
+        "All three hooks are gated behind `!!actor && !actorFetching && !isInitializing` in the same style as `useGetLiveMarketData` / `useGetHistoricalPriceData`.",
+        "User-facing errors produced by these hooks are in English (no demo-mode messaging)."
+      ]
+    },
+    {
+      "id": "REQ-35",
+      "text": "Create a new reusable `SymbolPicker` React component that renders a search input at the top and a scrollable list of symbols below; the list must be filtered using a standard React in-memory filter so that as the user types, the list narrows to matching symbols.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-3"
+        ],
+        "quotes": [
+          "Create a 'Symbol Picker' component with a search input at the top.",
+          "Use a standard React filter method so that as I type, the list automatically narrows down to matching symbols."
+        ]
+      },
+      "acceptanceCriteria": [
+        "A new component named `SymbolPicker` exists under `frontend/src/components/` (or an appropriate subfolder) and is used by the Add Crypto flow.",
+        "The component renders a search input at the top and a list of available symbols below.",
+        "Typing in the search input filters the displayed list using a standard JS/React filter approach (e.g., `array.filter(...)`) without requiring a backend call per keystroke.",
+        "Filtering is case-insensitive and matches at least substrings of the symbol text (e.g., typing `et` matches `ETH`).",
+        "If the filter yields zero results, the component shows a clear English empty state message (e.g., “No matching symbols.”)."
+      ]
+    },
+    {
+      "id": "REQ-36",
+      "text": "Update `frontend/src/components/AddCryptoDialog.tsx` to remove the current placeholder “Feature Not Available” demo message and replace it with the live Symbol Picker UI fed by the backend `validSymbols` data.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-3"
+        ],
+        "quotes": [
+          "Replace the 'Add Crypto' demo message with a live React searchable list."
+        ]
+      },
+      "acceptanceCriteria": [
+        "`AddCryptoDialog.tsx` no longer renders the placeholder alert that says backend crypto functionality is not implemented.",
+        "When the dialog opens, it fetches and displays the available symbols from the backend (via the new `useGetValidSymbols` hook).",
+        "The dialog shows a loading state while symbols are being fetched and a clear English error message if fetching fails.",
+        "Selecting a symbol triggers the add-to-watchlist mutation and provides immediate UI feedback (e.g., disabled state/spinner) while the mutation is in flight.",
+        "After a successful add, the dialog closes (or otherwise clearly confirms success in English) and the rest of the dashboard reflects the updated watchlist via query invalidation/refetch."
+      ]
+    },
+    {
+      "id": "REQ-37",
+      "text": "Update the dashboard to reflect the user’s watchlist immediately after adding a coin by sourcing live tick symbols from the backend watchlist (using the new `useGetWatchlist` hook) instead of a fixed hard-coded symbol list.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-3"
+        ],
+        "quotes": [
+          "...and immediately update my dashboard."
+        ]
+      },
+      "acceptanceCriteria": [
+        "`frontend/src/pages/Dashboard.tsx` uses `useGetWatchlist` to determine the symbols passed into `WatchlistPriceTicks` (replacing the current hard-coded `liveTickSymbols`).",
+        "After adding a symbol via Add Crypto, the watchlist-driven `WatchlistPriceTicks` list updates without requiring a full page reload.",
+        "When the watchlist is empty, the existing empty-state message in `WatchlistPriceTicks` is shown (English).",
+        "Any user-facing loading/error messaging introduced on the dashboard is in English and does not mention “demo mode”."
       ]
     }
   ],
   "constraints": [
-    "Do not edit any files under frontend/src/components/ui (Shadcn UI components are read-only).",
-    "Do not edit any paths listed in SYSTEM_CONTEXT.frontend.immutablePaths (compose around them instead).",
-    "Backend must remain single-actor; do not introduce additional canisters or external databases/services."
+    "Respect the single-actor backend architecture: all Motoko logic must remain in `backend/main.mo` (create `backend/migration.mo` only if an upgrade-safe state migration is required).",
+    "Do not edit files under `frontend/src/components/ui` or any other `frontend.immutablePaths` entries listed in SYSTEM_CONTEXT; compose existing UI components instead.",
+    "Use English for all user-facing text.",
+    "Do not reintroduce “Demo Mode” messaging in the Add Crypto / watchlist flow."
   ],
   "nonGoals": [
-    "Implementing backend watchlist CRUD endpoints (add/remove/list) is out of scope for this fix.",
-    "Adding new authentication providers beyond Internet Identity is out of scope.",
-    "Changing CoinGecko data parsing/formatting logic is out of scope unless required to display the improved error message."
+    "Implementing third-party authentication providers (only Internet Identity is supported).",
+    "Adding external databases or non-IC backend services.",
+    "Real-time updates via WebSockets/push notifications (dashboard updates should be driven by React Query invalidation/refetch).",
+    "Changing CoinGecko live market data behavior beyond what is necessary to display newly-added watchlist symbols."
   ],
   "imageRequirements": {
     "required": [],

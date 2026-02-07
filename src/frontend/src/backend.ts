@@ -123,8 +123,10 @@ export enum UserRole {
 }
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
+    addCryptoToWatchlist(symbol: CryptoSymbol): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     checkCyclesSafeForOutcall(): Promise<boolean>;
+    checkSymbolValidity(symbol: CryptoSymbol): Promise<boolean>;
     debugFetchCoinGecko(symbol: CryptoSymbol): Promise<string>;
     fetchHistoricalPriceData(symbol: CryptoSymbol, days: bigint): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -133,6 +135,8 @@ export interface backendInterface {
     getLiveMarketData(symbol: CryptoSymbol): Promise<string>;
     getOutcallCycleStatus(): Promise<OutcallCycleStatus>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
+    getValidSymbols(): Promise<Array<CryptoSymbol>>;
+    getWatchlist(): Promise<Array<CryptoSymbol>>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     transformRaw(input: TransformationInput): Promise<TransformationOutput>;
@@ -151,6 +155,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor._initializeAccessControlWithSecret(arg0);
+            return result;
+        }
+    }
+    async addCryptoToWatchlist(arg0: CryptoSymbol): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.addCryptoToWatchlist(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.addCryptoToWatchlist(arg0);
             return result;
         }
     }
@@ -179,6 +197,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.checkCyclesSafeForOutcall();
+            return result;
+        }
+    }
+    async checkSymbolValidity(arg0: CryptoSymbol): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.checkSymbolValidity(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.checkSymbolValidity(arg0);
             return result;
         }
     }
@@ -292,6 +324,34 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getUserProfile(arg0);
             return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getValidSymbols(): Promise<Array<CryptoSymbol>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getValidSymbols();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getValidSymbols();
+            return result;
+        }
+    }
+    async getWatchlist(): Promise<Array<CryptoSymbol>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getWatchlist();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getWatchlist();
+            return result;
         }
     }
     async isCallerAdmin(): Promise<boolean> {

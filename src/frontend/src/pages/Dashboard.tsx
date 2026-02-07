@@ -3,6 +3,7 @@ import CryptoCard from '../components/CryptoCard';
 import WatchlistManager from '../components/WatchlistManager';
 import WatchlistPriceTicks from '../components/WatchlistPriceTicks';
 import BackendTesterEntryPoint from '../components/BackendTesterEntryPoint';
+import { useGetWatchlist } from '../hooks/useQueries';
 
 interface DashboardProps {
   onNavigateToTester?: () => void;
@@ -11,8 +12,8 @@ interface DashboardProps {
 export default function Dashboard({ onNavigateToTester }: DashboardProps) {
   const popularCryptos = ['BTC', 'ETH', 'XRP', 'SOL', 'ADA', 'DOGE'];
   
-  // Supported symbols for live price ticks (only BTC, ETH, XRP are supported by backend)
-  const liveTickSymbols = ['BTC', 'ETH', 'XRP'];
+  // Fetch watchlist from backend
+  const { data: watchlist = [], isLoading: watchlistLoading } = useGetWatchlist();
 
   return (
     <div className="container py-8 space-y-8">
@@ -42,7 +43,7 @@ export default function Dashboard({ onNavigateToTester }: DashboardProps) {
         </div>
 
         <div className="space-y-6">
-          <WatchlistPriceTicks symbols={liveTickSymbols} />
+          <WatchlistPriceTicks symbols={watchlist} />
         </div>
       </div>
 

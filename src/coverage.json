@@ -1,70 +1,99 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T20:19:23.756Z",
+  "generatedAt": "2026-02-07T20:25:58.859Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 3,
+    "total": 7,
+    "implemented": 4,
     "items": [
       {
-        "id": "REQ-28",
-        "summary": "Fix the frontend backend-connection bootstrap flow so the app cannot remain indefinitely stuck on “Connecting to backend” after browser cache/cookies/storage are cleared and the cached backend canister ID is missing; the app must either (a) successfully re-discover/recreate the backend actor, or (b) surface a clear actionable error state with recovery actions.",
+        "id": "REQ-31",
+        "summary": "Expose the backend coin directory used by the frontend by implementing a `validSymbols` map in `backend/main.mo` and a user-accessible method to read it (e.g., `getValidSymbols()`), so the frontend can fetch the list directly from the backend rather than using hard-coded/demo data.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-32",
+        "summary": "Implement backend watchlist persistence and mutations in `backend/main.mo` by adding a per-user watchlist store and an authenticated backend method `addCryptoToWatchlist(symbol : CryptoSymbol)` that adds a selected symbol to the caller’s watchlist.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-33",
+        "summary": "Implement a backend watchlist read endpoint in `backend/main.mo` (e.g., `getWatchlist() : async [CryptoSymbol]`) so the frontend can render the user’s current selections and refresh the dashboard after mutations.",
+        "status": "unknown",
+        "plannedFiles": [],
+        "matchedFiles": []
+      },
+      {
+        "id": "REQ-34",
+        "summary": "Replace the stubbed React Query hooks in `frontend/src/hooks/useQueries.ts` with live implementations that call the backend for (1) fetching valid symbols, (2) fetching the caller’s watchlist, and (3) adding a symbol to the watchlist, and ensure they only run when the backend actor is available and Internet Identity initialization has completed.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/ConnectionBootstrapper.tsx",
-          "frontend/src/App.tsx",
-          "frontend/src/utils/connectionErrors.ts"
+          "frontend/src/hooks/useQueries.ts"
         ],
         "matchedFiles": [
-          "frontend/src/components/ConnectionBootstrapper.tsx",
-          "frontend/src/App.tsx",
-          "frontend/src/utils/connectionErrors.ts"
+          "frontend/src/hooks/useQueries.ts"
         ]
       },
       {
-        "id": "REQ-29",
-        "summary": "Harden the actor initialization hook so it reliably reports errors when actor creation fails (including missing canister ID / misconfiguration) instead of silently staying in an idle/loading state, and ensure the error is propagated to the existing connection UI (ConnectionBootstrapper / ConnectionDetails).",
+        "id": "REQ-35",
+        "summary": "Create a new reusable `SymbolPicker` React component that renders a search input at the top and a scrollable list of symbols below; the list must be filtered using a standard React in-memory filter so that as the user types, the list narrows to matching symbols.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/hooks/useActor.ts",
-          "frontend/src/hooks/useActorEnhanced.ts",
-          "frontend/src/components/ConnectionDetails.tsx"
+          "frontend/src/components/SymbolPicker.tsx",
+          "frontend/src/components/AddCryptoDialog.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/hooks/useActorEnhanced.ts",
-          "frontend/src/components/ConnectionDetails.tsx"
+          "frontend/src/components/SymbolPicker.tsx",
+          "frontend/src/components/AddCryptoDialog.tsx"
         ]
       },
       {
-        "id": "REQ-30",
-        "summary": "Improve Watchlist live price tick row error messaging for cycle-exhaustion failures so it is user-understandable and consistent with the dashboard’s cycle error handling: when the live market data request fails with an IC rejection containing 'out of cycles' / IC0504 (or equivalent), show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
+        "id": "REQ-36",
+        "summary": "Update `frontend/src/components/AddCryptoDialog.tsx` to remove the current placeholder “Feature Not Available” demo message and replace it with the live Symbol Picker UI fed by the backend `validSymbols` data.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/WatchlistPriceTickRow.tsx",
-          "frontend/src/utils/connectionErrors.ts"
+          "frontend/src/components/AddCryptoDialog.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/components/WatchlistPriceTickRow.tsx",
-          "frontend/src/utils/connectionErrors.ts"
+          "frontend/src/components/AddCryptoDialog.tsx"
+        ]
+      },
+      {
+        "id": "REQ-37",
+        "summary": "Update the dashboard to reflect the user’s watchlist immediately after adding a coin by sourcing live tick symbols from the backend watchlist (using the new `useGetWatchlist` hook) instead of a fixed hard-coded symbol list.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/pages/Dashboard.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/pages/Dashboard.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/src/App.tsx",
-    "frontend/src/components/ConnectionBootstrapper.tsx",
-    "frontend/src/components/ConnectionDetails.tsx",
-    "frontend/src/components/WatchlistPriceTickRow.tsx",
-    "frontend/src/hooks/useActorEnhanced.ts",
-    "frontend/src/utils/connectionErrors.ts",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/AddCryptoDialog.tsx",
+    "frontend/src/components/SymbolPicker.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/hooks/useQueries.ts",
+    "frontend/src/pages/Dashboard.tsx",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

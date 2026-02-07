@@ -40,8 +40,10 @@ export enum UserRole {
     guest = "guest"
 }
 export interface backendInterface {
+    addCryptoToWatchlist(symbol: CryptoSymbol): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     checkCyclesSafeForOutcall(): Promise<boolean>;
+    checkSymbolValidity(symbol: CryptoSymbol): Promise<boolean>;
     debugFetchCoinGecko(symbol: CryptoSymbol): Promise<string>;
     fetchHistoricalPriceData(symbol: CryptoSymbol, days: bigint): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
@@ -50,6 +52,8 @@ export interface backendInterface {
     getLiveMarketData(symbol: CryptoSymbol): Promise<string>;
     getOutcallCycleStatus(): Promise<OutcallCycleStatus>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
+    getValidSymbols(): Promise<Array<CryptoSymbol>>;
+    getWatchlist(): Promise<Array<CryptoSymbol>>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     transformRaw(input: TransformationInput): Promise<TransformationOutput>;

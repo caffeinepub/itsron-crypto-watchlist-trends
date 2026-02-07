@@ -1,13 +1,14 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 21,
+  "projectStateVersion": 23,
   "summary": "Project now includes ensuring production reliability of CoinGecko HTTP outcalls by preventing backend canister cycle exhaustion (auto top-ups/monitoring) in addition to live-mode go-live prep and in-app debug/testing.",
   "architectural_notes": [
     "Frontend depends on a cached backend canister ID (e.g., in localStorage); actor creation can stall if the cached ID is missing/wiped and auto-discovery does not run.",
     "Backend canister `itsron_crypto_backend` exposes `getLiveMarketData(symbol)` and will add a `debugFetchCoinGecko(symbol)` function that performs an HTTP outcall to the CoinGecko URL builder and returns the raw response for debugging.",
     "Need an explicit, persistent environment/mode configuration (demo vs live) and a clear path to deploy/verify the live mode in the hosted Caffeine environment.",
     "Caffeine environment has no terminal/dfx access for the user; CoinGecko raw-response validation must be done via an in-app UI/tester flow that calls canister methods and renders the returned raw response (and any surfaced debug info).",
-    "HTTPS outcalls to CoinGecko require cycles; backend must monitor cycle balance and maintain sufficient cycles (e.g., via auto top-ups) to avoid IC0504 rejections in production."
+    "HTTPS outcalls to CoinGecko require cycles; backend must monitor cycle balance and maintain sufficient cycles (e.g., via auto top-ups) to avoid IC0504 rejections in production.",
+    "Add Crypto dialog should fetch the available coin/symbol list from the backend `validSymbols` map and provide a searchable Symbol Picker UI; selecting a symbol calls `addCryptoToWatchlist` and triggers an immediate UI refresh of watchlist/dashboard state."
   ],
   "known_issues": [
     "Clearing browser cache/cookies can wipe the cached backend canister ID, causing the app to remain stuck on “Connecting to backend” (actor never begins fetching; stage remains idle) even when Internet Identity is authenticated.",
@@ -15,7 +16,7 @@
     "Backend canister ran out of cycles, causing IC0504 rejection on CoinGecko HTTPS outcalls and breaking live market data for all symbols until cycles are replenished.",
     "Watchlist price ticks section is still hard-coded to always show “Coming Soon” and is not wired to live market data (no `useGetLiveMarketData()` per symbol / no watchlist-to-symbol binding)."
   ],
-  "isFixRequest": true,
+  "isFixRequest": false,
   "existing_features": [
     {
       "id": "feature-add-a-developer-facing-documentation-file-that-includes-the-exact-deploy-and-test-commands-to-validate-raw-coingecko-responses-via-dfx-using-the-canister-name-itsron-crypto-backend-and-covering-btc-eth-and-xrp",
@@ -150,6 +151,38 @@
       "title": "Improve Watchlist live price tick row error messaging for cycle-exhaustion failures so it is user-understandable and consistent with the dashboard’s cycle error handling: when the live market data request fails with an IC rejection containing 'out of cycles' / IC0504 (or equivalent), show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
       "reqIds": [
         "REQ-30"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-replace-the-stubbed-react-query-hooks-in-frontend-src-hooks-usequeries-ts-with-live-implementations-that-call-the-backend-for-1-fetching-valid-symbols-2-fetching-the-caller-s-watchlist-and-3-adding-a-symbol-to-the-watchlist-and-ensure-they-only-run-when-the-backend-actor-is-available-and-internet-identity-initialization-has-completed",
+      "title": "Replace the stubbed React Query hooks in `frontend/src/hooks/useQueries.ts` with live implementations that call the backend for (1) fetching valid symbols, (2) fetching the caller’s watchlist, and (3) adding a symbol to the watchlist, and ensure they only run when the backend actor is available and Internet Identity initialization has completed.",
+      "reqIds": [
+        "REQ-34"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-create-a-new-reusable-symbolpicker-react-component-that-renders-a-search-input-at-the-top-and-a-scrollable-list-of-symbols-below-the-list-must-be-filtered-using-a-standard-react-in-memory-filter-so-that-as-the-user-types-the-list-narrows-to-matching-symbols",
+      "title": "Create a new reusable `SymbolPicker` React component that renders a search input at the top and a scrollable list of symbols below; the list must be filtered using a standard React in-memory filter so that as the user types, the list narrows to matching symbols.",
+      "reqIds": [
+        "REQ-35"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-frontend-src-components-addcryptodialog-tsx-to-remove-the-current-placeholder-feature-not-available-demo-message-and-replace-it-with-the-live-symbol-picker-ui-fed-by-the-backend-validsymbols-data",
+      "title": "Update `frontend/src/components/AddCryptoDialog.tsx` to remove the current placeholder “Feature Not Available” demo message and replace it with the live Symbol Picker UI fed by the backend `validSymbols` data.",
+      "reqIds": [
+        "REQ-36"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-the-dashboard-to-reflect-the-user-s-watchlist-immediately-after-adding-a-coin-by-sourcing-live-tick-symbols-from-the-backend-watchlist-using-the-new-usegetwatchlist-hook-instead-of-a-fixed-hard-coded-symbol-list",
+      "title": "Update the dashboard to reflect the user’s watchlist immediately after adding a coin by sourcing live tick symbols from the backend watchlist (using the new `useGetWatchlist` hook) instead of a fixed hard-coded symbol list.",
+      "reqIds": [
+        "REQ-37"
       ],
       "version": 1
     }
@@ -299,6 +332,36 @@
       "id": "AR-20",
       "summary": "Fix Watchlist Live Price Ticks UI by replacing the hard-coded “Coming Soon” block in `WatchlistPriceTicks` with real rendering: load watchlist symbols from backend (if available) and/or use existing watchlist state, run `useGetLiveMarketData()` per symbol, and display live price tick updates instead of the placeholder.",
       "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-21",
+      "summary": "Replace the 'Add Crypto' demo message with a live, searchable React 'Symbol Picker' list sourced from the backend `validSymbols` map; on selection call `addCryptoToWatchlist` and immediately update/refresh the dashboard.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-22",
+      "summary": "Expose the backend coin directory used by the frontend by implementing a `validSymbols` map in `backend/main.mo` and a user-accessible method to read it (e.g., `getValidSymbols()`), so the frontend can fetch the list directly from the backend rather than using hard-coded/demo data.",
+      "reqIds": [
+        "REQ-31"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-23",
+      "summary": "Implement backend watchlist persistence and mutations in `backend/main.mo` by adding a per-user watchlist store and an authenticated backend method `addCryptoToWatchlist(symbol : CryptoSymbol)` that adds a selected symbol to the caller’s watchlist.",
+      "reqIds": [
+        "REQ-32"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-24",
+      "summary": "Implement a backend watchlist read endpoint in `backend/main.mo` (e.g., `getWatchlist() : async [CryptoSymbol]`) so the frontend can render the user’s current selections and refresh the dashboard after mutations.",
+      "reqIds": [
+        "REQ-33"
+      ],
       "status": "pending"
     }
   ],

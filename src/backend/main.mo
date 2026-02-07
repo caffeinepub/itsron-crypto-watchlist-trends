@@ -5,11 +5,12 @@ import AccessControl "authorization/access-control";
 import OutCall "http-outcalls/outcall";
 import MixinAuthorization "authorization/MixinAuthorization";
 import Text "mo:core/Text";
-
+import Iter "mo:core/Iter";
 import Nat "mo:core/Nat";
 import Cycles "mo:core/Cycles";
+import Migration "migration";
 
-
+(with migration = Migration.run)
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -21,6 +22,12 @@ actor {
   public type CryptoSymbol = Text; // "BTC", "ETH", "XRP" allowed
 
   let userProfiles = Map.empty<Principal, UserProfile>();
+  let validSymbols = Map.fromIter(
+    ["BTC", "ETH", "XRP"].values().map(
+      func(symbol) { (symbol, symbol) }
+    )
+  );
+  let userWatchlists = Map.empty<Principal, Map.Map<CryptoSymbol, CryptoSymbol>>();
 
   var outcallThresholdCycles : Nat = 100_000_000_000;
 
@@ -48,7 +55,7 @@ actor {
     if (not AccessControl.isAdmin(accessControlState, caller)) {
       Runtime.trap("Unauthorized: Only admins can view outcall cycle status");
     };
-    
+
     let balance = Cycles.balance();
 
     let status = if (balance > outcallThresholdCycles) {
@@ -200,5 +207,49 @@ actor {
         await OutCall.httpGetRequest(url, [], transformRaw);
       };
     };
+  };
+
+  func getOrCreateWatchlist(user : Principal) : Map.Map<CryptoSymbol, CryptoSymbol> {
+    switch (userWatchlists.get(user)) {
+      case (?watchlist) { watchlist };
+      case (null) {
+        let newWatchlist = Map.empty<CryptoSymbol, CryptoSymbol>();
+        userWatchlists.add(user, newWatchlist);
+        newWatchlist;
+      };
+    };
+  };
+
+  public query ({ caller }) func getValidSymbols() : async [CryptoSymbol] {
+    validSymbols.keys().toArray();
+  };
+
+  public query ({ caller }) func checkSymbolValidity(symbol : CryptoSymbol) : async Bool {
+    validSymbols.containsKey(symbol);
+  };
+
+  public shared ({ caller }) func addCryptoToWatchlist(symbol : CryptoSymbol) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can modify watchlists");
+    };
+
+    if (not validSymbols.containsKey(symbol)) {
+      Runtime.trap("Attempted to add invalid symbol: " # symbol);
+    };
+
+    let currentWatchlist = getOrCreateWatchlist(caller);
+
+    if (currentWatchlist.containsKey(symbol)) {
+      Runtime.trap("Symbol already in watchlist. Not adding again.");
+    };
+
+    currentWatchlist.add(symbol, symbol);
+  };
+
+  public query ({ caller }) func getWatchlist() : async [CryptoSymbol] {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can view watchlists");
+    };
+    getOrCreateWatchlist(caller).keys().toArray();
   };
 };

@@ -37,8 +37,10 @@ export interface http_request_result {
 }
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  'addCryptoToWatchlist' : ActorMethod<[CryptoSymbol], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'checkCyclesSafeForOutcall' : ActorMethod<[], boolean>,
+  'checkSymbolValidity' : ActorMethod<[CryptoSymbol], boolean>,
   'debugFetchCoinGecko' : ActorMethod<[CryptoSymbol], string>,
   'fetchHistoricalPriceData' : ActorMethod<[CryptoSymbol, bigint], string>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
@@ -47,6 +49,8 @@ export interface _SERVICE {
   'getLiveMarketData' : ActorMethod<[CryptoSymbol], string>,
   'getOutcallCycleStatus' : ActorMethod<[], OutcallCycleStatus>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
+  'getValidSymbols' : ActorMethod<[], Array<CryptoSymbol>>,
+  'getWatchlist' : ActorMethod<[], Array<CryptoSymbol>>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'transformRaw' : ActorMethod<[TransformationInput], TransformationOutput>,

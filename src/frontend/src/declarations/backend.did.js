@@ -8,12 +8,12 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
+export const CryptoSymbol = IDL.Text;
 export const UserRole = IDL.Variant({
   'admin' : IDL.Null,
   'user' : IDL.Null,
   'guest' : IDL.Null,
 });
-export const CryptoSymbol = IDL.Text;
 export const UserProfile = IDL.Record({ 'name' : IDL.Text });
 export const OutcallCycleStatus = IDL.Record({
   'status' : IDL.Text,
@@ -41,8 +41,10 @@ export const TransformationOutput = IDL.Record({
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  'addCryptoToWatchlist' : IDL.Func([CryptoSymbol], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'checkCyclesSafeForOutcall' : IDL.Func([], [IDL.Bool], []),
+  'checkSymbolValidity' : IDL.Func([CryptoSymbol], [IDL.Bool], ['query']),
   'debugFetchCoinGecko' : IDL.Func([CryptoSymbol], [IDL.Text], []),
   'fetchHistoricalPriceData' : IDL.Func(
       [CryptoSymbol, IDL.Nat],
@@ -59,6 +61,8 @@ export const idlService = IDL.Service({
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
+  'getValidSymbols' : IDL.Func([], [IDL.Vec(CryptoSymbol)], ['query']),
+  'getWatchlist' : IDL.Func([], [IDL.Vec(CryptoSymbol)], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'transformRaw' : IDL.Func(
@@ -71,12 +75,12 @@ export const idlService = IDL.Service({
 export const idlInitArgs = [];
 
 export const idlFactory = ({ IDL }) => {
+  const CryptoSymbol = IDL.Text;
   const UserRole = IDL.Variant({
     'admin' : IDL.Null,
     'user' : IDL.Null,
     'guest' : IDL.Null,
   });
-  const CryptoSymbol = IDL.Text;
   const UserProfile = IDL.Record({ 'name' : IDL.Text });
   const OutcallCycleStatus = IDL.Record({
     'status' : IDL.Text,
@@ -101,8 +105,10 @@ export const idlFactory = ({ IDL }) => {
   
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    'addCryptoToWatchlist' : IDL.Func([CryptoSymbol], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'checkCyclesSafeForOutcall' : IDL.Func([], [IDL.Bool], []),
+    'checkSymbolValidity' : IDL.Func([CryptoSymbol], [IDL.Bool], ['query']),
     'debugFetchCoinGecko' : IDL.Func([CryptoSymbol], [IDL.Text], []),
     'fetchHistoricalPriceData' : IDL.Func(
         [CryptoSymbol, IDL.Nat],
@@ -119,6 +125,8 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
+    'getValidSymbols' : IDL.Func([], [IDL.Vec(CryptoSymbol)], ['query']),
+    'getWatchlist' : IDL.Func([], [IDL.Vec(CryptoSymbol)], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'transformRaw' : IDL.Func(

@@ -1,79 +1,81 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Fix connection bootstrap stalling after cache clears and improve Watchlist cycle-exhaustion messaging",
+  "title": "Live Symbol Picker backed by backend validSymbols + watchlist mutations (frontend wiring)",
   "requirements": [
     {
-      "id": "REQ-28",
-      "summary": "Prevent indefinite “Connecting to backend” by enforcing a bounded connection bootstrap with actionable recovery UI when actor creation cannot complete (e.g., missing canister ID after site data clears).",
+      "id": "REQ-34",
+      "summary": "Replace stubbed React Query hooks with live backend calls for valid symbols, watchlist read, and add-to-watchlist mutation; gate by actor readiness and Internet Identity initialization.",
       "acceptanceCriteria": [
-        "After clearing site data (cache/cookies/storage) and reloading while authenticated with Internet Identity, the app progresses out of the connecting state without requiring manual developer intervention.",
-        "If the backend actor cannot be created due to missing/invalid configuration (including missing canister ID), the user sees an English error screen (not an infinite spinner) within 45 seconds with actionable buttons (Retry Connection, Re-authenticate, Refresh Page).",
-        "The error screen includes enough diagnostic detail (via the existing ConnectionDetails panel) to confirm whether actor creation was attempted and why it failed.",
-        "Retry actions actually trigger a new actor-creation attempt (not just re-rendering the same idle state)."
+        "`useGetValidSymbols` is enabled (not `enabled: false`) and calls the backend method that returns `validSymbols`.",
+        "`useGetWatchlist` is enabled (not `enabled: false`) and calls the backend watchlist read method.",
+        "`useAddCryptoToWatchlist` calls the backend `addCryptoToWatchlist` method and, on success, invalidates the `watchlist` query (and any other relevant dashboard queries that should reflect the change).",
+        "All three hooks are gated behind `!!actor && !actorFetching && !isInitializing` in the same style as `useGetLiveMarketData` / `useGetHistoricalPriceData`.",
+        "User-facing errors produced by these hooks are in English (no demo-mode messaging)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/ConnectionBootstrapper.tsx",
+          "path": "frontend/src/hooks/useQueries.ts",
           "operation": "modify",
-          "description": "Update the bootstrap UI to time out within 45 seconds even when actorFetching becomes false but actorReady is still false (e.g., stuck 'idle' after cache clears). Ensure the error screen is shown (not a spinner) and includes Retry Connection, Re-authenticate, and Refresh Page actions, while keeping ConnectionDetails visible for diagnostics. Verify the component's usage instructions before implementing."
-        },
+          "description": "Implement live hooks: (1) `useGetValidSymbols` calling `actor.getValidSymbols()` and returning `CryptoSymbol[]`; (2) `useGetWatchlist` calling `actor.getWatchlist()`; (3) `useAddCryptoToWatchlist` calling `actor.addCryptoToWatchlist(symbol)` and invalidating `['watchlist']` on success. Gate all three with `!!actor && !actorFetching && !isInitializing` using the existing `useActor` + `useInternetIdentity` pattern. Ensure thrown errors are clear English strings (no demo-mode messaging). Use the selected `authorization` component guidance for frontend auth/initialization gating patterns and cache clearing behavior where relevant; verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-35",
+      "summary": "Create a reusable in-memory searchable SymbolPicker component for selecting a crypto symbol.",
+      "acceptanceCriteria": [
+        "A new component named `SymbolPicker` exists under `frontend/src/components/` (or an appropriate subfolder) and is used by the Add Crypto flow.",
+        "The component renders a search input at the top and a list of available symbols below.",
+        "Typing in the search input filters the displayed list using a standard JS/React filter approach (e.g., `array.filter(...)`) without requiring a backend call per keystroke.",
+        "Filtering is case-insensitive and matches at least substrings of the symbol text (e.g., typing `et` matches `ETH`).",
+        "If the filter yields zero results, the component shows a clear English empty state message (e.g., “No matching symbols.”)."
+      ],
+      "file_operations": [
         {
-          "path": "frontend/src/App.tsx",
-          "operation": "modify",
-          "description": "Wire ConnectionBootstrapper to receive a real actorError and a retry handler that triggers a new actor-creation attempt (not just a re-render). Ensure actorReady is computed from actor availability + error state so the UI cannot remain indefinitely in a connecting view. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/utils/connectionErrors.ts",
+          "path": "frontend/src/components/SymbolPicker.tsx",
           "operation": "create",
-          "description": "Add shared frontend helpers to normalize actor-creation/configuration failures into meaningful English Error messages (including missing/invalid canister ID scenarios) for display in ConnectionBootstrapper and ConnectionDetails. Verify the component's usage instructions before implementing."
+          "description": "Create `SymbolPicker` component that accepts a list of available symbols and an `onSelect(symbol)` callback, renders a search input at the top and a scrollable list beneath, and filters via in-memory case-insensitive substring matching. Include an English empty-state message when no matches exist. Compose existing UI primitives (do not edit anything under `frontend/src/components/ui`). Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/AddCryptoDialog.tsx",
+          "operation": "modify",
+          "description": "Wire the new `SymbolPicker` into the Add Crypto flow (ensures the new component is not orphaned). Verify the component's usage instructions before implementing."
         }
       ]
     },
     {
-      "id": "REQ-29",
-      "summary": "Harden actor initialization hooks to reliably surface actor-creation failures as Errors, transition diagnostics to 'error', and propagate failures to ConnectionBootstrapper / ConnectionDetails.",
+      "id": "REQ-36",
+      "summary": "Replace AddCryptoDialog placeholder with live Symbol Picker powered by backend valid symbols and watchlist mutation feedback.",
       "acceptanceCriteria": [
-        "When actor creation fails, the failure is exposed as a real Error (with a meaningful English message) that is shown by ConnectionBootstrapper.",
-        "The diagnostics stage reported by useActorEnhanced transitions to 'error' when actor creation fails, rather than remaining 'idle' indefinitely.",
-        "There is no state where the user is authenticated, but the app remains in a non-progressing 'idle' connection stage without either creating an actor or showing an error."
+        "`AddCryptoDialog.tsx` no longer renders the placeholder alert that says backend crypto functionality is not implemented.",
+        "When the dialog opens, it fetches and displays the available symbols from the backend (via the new `useGetValidSymbols` hook).",
+        "The dialog shows a loading state while symbols are being fetched and a clear English error message if fetching fails.",
+        "Selecting a symbol triggers the add-to-watchlist mutation and provides immediate UI feedback (e.g., disabled state/spinner) while the mutation is in flight.",
+        "After a successful add, the dialog closes (or otherwise clearly confirms success in English) and the rest of the dashboard reflects the updated watchlist via query invalidation/refetch."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/hooks/useActor.ts",
+          "path": "frontend/src/components/AddCryptoDialog.tsx",
           "operation": "modify",
-          "description": "Extend the hook to expose actor creation failures (react-query error) and a retry/refetch mechanism that forces a new createActorWithConfig attempt. Ensure errors from core-infrastructure actor/config creation (including missing canister ID/misconfiguration) are caught and surfaced as meaningful English Errors instead of silent idle/loading. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/hooks/useActorEnhanced.ts",
-          "operation": "modify",
-          "description": "Propagate errors from useActor into the enhanced state, ensuring diagnostics.stage becomes 'error' on failure and never remains 'idle' while authenticated without progress. Update retry() to invoke the underlying actor re-creation attempt (and only re-authenticate when appropriate), and include diagnostics details that confirm actor creation was attempted and why it failed. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/components/ConnectionDetails.tsx",
-          "operation": "modify",
-          "description": "Ensure the diagnostics panel can display improved normalized error details (from the shared connection error helper) and clearly reflects the 'error' stage when actor creation fails. Verify the component's usage instructions before implementing."
+          "description": "Remove the current “Feature Not Available” placeholder alert and implement the live Add Crypto UX: use `useGetValidSymbols` to fetch symbols (show loading + English error state), render `SymbolPicker` with fetched symbols, and on selection call `useAddCryptoToWatchlist`. While the mutation is pending, provide immediate feedback (e.g., disable selection / show spinner). On success, close the dialog (and/or show an English confirmation) relying on React Query invalidation to refresh the dashboard watchlist. Do not introduce any “Demo Mode” messaging. Compose existing UI components without modifying `frontend/src/components/ui/*`. Verify the component's usage instructions before implementing."
         }
       ]
     },
     {
-      "id": "REQ-30",
-      "summary": "Make Watchlist tick-row cycle-exhaustion errors user-understandable and consistent with the dashboard cycle error handling.",
+      "id": "REQ-37",
+      "summary": "Drive the dashboard’s live tick symbols from the backend watchlist and refresh immediately after additions.",
       "acceptanceCriteria": [
-        "In frontend/src/components/WatchlistPriceTickRow.tsx, cycle-exhaustion errors no longer display the generic 'Service unavailable' text; instead they display an English message that explicitly mentions the backend being out of cycles and that live data is temporarily unavailable until cycles are topped up.",
-        "Non-cycle errors continue to show a non-misleading generic error state (e.g., 'Error loading'), distinct from the cycle-specific message.",
-        "The tick rows still render successfully for symbols whose requests succeed, and failure messaging is isolated per row (one failing symbol does not break the whole list)."
+        "`frontend/src/pages/Dashboard.tsx` uses `useGetWatchlist` to determine the symbols passed into `WatchlistPriceTicks` (replacing the current hard-coded `liveTickSymbols`).",
+        "After adding a symbol via Add Crypto, the watchlist-driven `WatchlistPriceTicks` list updates without requiring a full page reload.",
+        "When the watchlist is empty, the existing empty-state message in `WatchlistPriceTicks` is shown (English).",
+        "Any user-facing loading/error messaging introduced on the dashboard is in English and does not mention “demo mode”."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/WatchlistPriceTickRow.tsx",
+          "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Replace the cycle error label with a concise English message aligned with CryptoCard (e.g., indicate the backend canister is out of cycles and live data is temporarily unavailable until cycles are topped up). Keep non-cycle errors as a distinct generic message and ensure error handling remains isolated per row. Verify the component's usage instructions before implementing."
-        },
-        {
-          "path": "frontend/src/utils/connectionErrors.ts",
-          "operation": "modify",
-          "description": "Add/extend a shared detector for IC cycle-exhaustion failures (e.g., 'out of cycles', IC0504/IC0406 or equivalent) so WatchlistPriceTickRow and other UI areas can use consistent classification and messaging. Verify the component's usage instructions before implementing."
+          "description": "Replace the hard-coded `liveTickSymbols` with the result of `useGetWatchlist`, and pass that list into `WatchlistPriceTicks`. Add minimal English loading/error handling around the watchlist fetch if needed, ensuring the existing empty state in `WatchlistPriceTicks` remains the empty-watchlist UX. Verify the component's usage instructions before implementing."
         }
       ]
     }

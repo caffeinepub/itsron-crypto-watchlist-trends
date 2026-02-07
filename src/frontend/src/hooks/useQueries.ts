@@ -144,6 +144,78 @@ export function useGetHistoricalPriceData(symbol: CryptoSymbol, days: number) {
 }
 
 // ============================================================================
+// CRYPTO FUNCTIONALITY - VALID SYMBOLS
+// ============================================================================
+
+export function useGetValidSymbols() {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { isInitializing } = useInternetIdentity();
+
+  return useQuery<CryptoSymbol[]>({
+    queryKey: ['validSymbols'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      try {
+        return await actor.getValidSymbols();
+      } catch (error: any) {
+        throw new Error(error.message || 'Failed to fetch valid symbols');
+      }
+    },
+    enabled: !!actor && !actorFetching && !isInitializing,
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 600000, // Consider data fresh for 10 minutes (valid symbols rarely change)
+  });
+}
+
+// ============================================================================
+// CRYPTO FUNCTIONALITY - WATCHLIST
+// ============================================================================
+
+export function useGetWatchlist() {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { isInitializing } = useInternetIdentity();
+
+  return useQuery<CryptoSymbol[]>({
+    queryKey: ['watchlist'],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      try {
+        return await actor.getWatchlist();
+      } catch (error: any) {
+        throw new Error(error.message || 'Failed to fetch watchlist');
+      }
+    },
+    enabled: !!actor && !actorFetching && !isInitializing,
+    retry: 2,
+    retryDelay: 1000,
+  });
+}
+
+export function useAddCryptoToWatchlist() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (symbol: CryptoSymbol) => {
+      if (!actor) {
+        throw new Error('Actor not ready');
+      }
+      try {
+        return await actor.addCryptoToWatchlist(symbol);
+      } catch (error: any) {
+        throw new Error(error.message || 'Failed to add cryptocurrency to watchlist');
+      }
+    },
+    onSuccess: () => {
+      // Invalidate watchlist and related queries
+      queryClient.invalidateQueries({ queryKey: ['watchlist'] });
+      queryClient.invalidateQueries({ queryKey: ['liveMarketData'] });
+    },
+  });
+}
+
+// ============================================================================
 // CRYPTO FUNCTIONALITY STUBS (Backend not yet implemented)
 // ============================================================================
 
@@ -155,35 +227,11 @@ export function useRegisterSelfAsUser() {
   });
 }
 
-export function useGetWatchlist() {
-  return useQuery<CryptoSymbol[]>({
-    queryKey: ['watchlist'],
-    queryFn: async () => [],
-    enabled: false,
-  });
-}
-
-export function useAddCryptoToWatchlist() {
-  return useMutation({
-    mutationFn: async (_symbol: CryptoSymbol) => {
-      throw new Error('Backend functionality not yet implemented');
-    },
-  });
-}
-
 export function useRemoveCryptoFromWatchlist() {
   return useMutation({
     mutationFn: async (_symbol: CryptoSymbol) => {
       throw new Error('Backend functionality not yet implemented');
     },
-  });
-}
-
-export function useGetValidSymbols() {
-  return useQuery<Array<[DisplaySymbol, SymbolPair]>>({
-    queryKey: ['validSymbols'],
-    queryFn: async () => [],
-    enabled: false,
   });
 }
 
