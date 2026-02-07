@@ -1,56 +1,69 @@
 {
   "kind": "build_request",
-  "title": "Fix Backend Tester output scrolling and correct demo/live mode messaging",
-  "priority": "high",
+  "title": "Add CoinGecko raw-response debug endpoint and validate getLiveMarketData symbols",
+  "priority": "normal",
   "requirements": [
     {
       "id": "REQ-1",
-      "text": "Fix the Backend Tester bottom output panel so it reliably scrolls (mouse wheel/trackpad, scrollbar drag, and touch) when command output exceeds the visible height, in both normal and maximized window states.",
-      "target": "frontend",
+      "text": "Add a public shared Motoko debug endpoint `debugFetchCoinGecko(symbol : CryptoSymbol) : async Text` in `backend/main.mo` that builds the CoinGecko URL for the given symbol, performs the HTTP GET outcall, prints debug logs (URL + raw response), and returns the raw response body as `Text`, matching the user-provided function behavior.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "recent-messages"
+          "msg-1"
         ],
         "quotes": [
-          "the bottom panel is still not scrollin"
+          "Add this debug function to main.mo:\nmotokopublic shared func debugFetchCoinGecko(symbol : CryptoSymbol) : async Text {\n  switch (buildCoinGeckoUrl(symbol)) {\n    case (?url) {\n      Debug.print(\"Fetching: \" # url);\n      let result = await OutCall.httpGetRequest(url, [], transform);\n      Debug.print(\"Raw response: \" # result);\n      result\n    };\n    case (null) { \"Error: Could not build URL\" };\n  };\n};"
         ]
       },
       "acceptanceCriteria": [
-        "When the Backend Tester has enough output to overflow, the output area can be scrolled with mouse wheel/trackpad, scrollbar drag, and touch (where applicable).",
-        "Scrolling works in both windowState='normal' and windowState='maximized'.",
-        "The output panel does not get 'stuck' due to parent container overflow/height constraints; the output region remains the only scrollable region for output content.",
-        "Auto-scroll-to-bottom continues to work when the user is at the bottom; if the user scrolls up, new output does not force-scroll them back down until they return to bottom."
+        "`dfx canister call itsron_crypto_backend debugFetchCoinGecko '(\"BTC\")'` returns a non-empty `Text` response when the CoinGecko call succeeds.",
+        "Canister logs include lines starting with `Fetching:` and `Raw response:` for each call.",
+        "If `buildCoinGeckoUrl(symbol)` cannot build a URL, the function returns exactly `Error: Could not build URL` (as `Text`)."
       ]
     },
     {
       "id": "REQ-2",
-      "text": "Update the Backend Tester UI and command definitions to stop showing a generic 'demo mode' message when live backend calls are being used; instead, accurately reflect live vs demo behavior based on the actual command implementation.",
-      "target": "frontend",
+      "text": "Ensure the backend canister exposes `getLiveMarketData(symbol : CryptoSymbol)` callable via `dfx canister call itsron_crypto_backend getLiveMarketData '(\"BTC\")'` / `(\"ETH\")` / `(\"XRP\")`, and that it uses the same CoinGecko URL-building logic as `debugFetchCoinGecko` so live-data failures can be debugged consistently.",
+      "target": "backend",
       "source": {
         "messageIds": [
-          "recent-messages"
+          "msg-1"
         ],
         "quotes": [
-          "were still in demo mode even though the test are pulling live data"
+          "dfx canister call itsron_crypto_backend getLiveMarketData '(\"BTC\")'\n\n# Test ETH\ndfx canister call itsron_crypto_backend getLiveMarketData '(\"ETH\")'\n\n# Test XRP\ndfx canister call itsron_crypto_backend getLiveMarketData '(\"XRP\")'"
         ]
       },
       "acceptanceCriteria": [
-        "The note/banner text in the Backend Tester no longer implies the entire tester is in demo mode when at least some commands are live backend calls.",
-        "Commands that call the canister (use the actor) are clearly indicated as Live, and commands that return mock data are clearly indicated as Demo (either via label/badge/description).",
-        "Text is consistent between the command list and the informational note (no contradictions like 'demo mode' while running live calls).",
-        "No user-facing text mentions Kraken/API sources that are not actually being used by the command implementation (e.g., remove or correct 'Kraken API' in demo placeholders if it confuses live status)."
+        "`getLiveMarketData` is present in the candid interface and callable for BTC/ETH/XRP via `dfx canister call ...` without method-not-found errors.",
+        "When CoinGecko is reachable, `getLiveMarketData` returns successfully for BTC, ETH, and XRP.",
+        "When CoinGecko is unreachable or returns an error, developers can call `debugFetchCoinGecko` for the same symbol and receive the raw response used to diagnose the issue."
+      ]
+    },
+    {
+      "id": "REQ-3",
+      "text": "Preserve the existing user-profile and authorization behavior currently implemented in `backend/main.mo` (profile getters/setter and access control mixin) while adding the new crypto debug and live-market-data functions.",
+      "target": "backend",
+      "source": {
+        "messageIds": [
+          "msg-1"
+        ],
+        "quotes": [
+          "Add this debug function to main.mo"
+        ]
+      },
+      "acceptanceCriteria": [
+        "Existing methods `getCallerUserProfile`, `getUserProfile`, and `saveCallerUserProfile` still compile and behave as before (no signature changes, no removed access checks).",
+        "The canister builds successfully with both profile features and the newly added crypto endpoints present."
       ]
     }
   ],
   "constraints": [
-    "Do not modify any files under frontend/src/components/ui (read-only).",
-    "Do not modify frontend immutable paths: frontend/src/hooks/useInternetIdentity.ts, frontend/src/hooks/useInternetIdentity.tsx, frontend/src/hooks/useActor.ts, frontend/src/main.tsx.",
-    "Backend must remain single-actor in backend/main.mo; only add migration.mo if persistent state schema changes are required."
+    "Backend must remain a single Motoko actor in `backend/main.mo` (no additional backend services).",
+    "Use English for any user-facing text."
   ],
   "nonGoals": [
-    "Implementing full watchlist/forecast/alerts crypto backend features beyond what is needed for accurate tester messaging.",
-    "Adding new authentication providers beyond Internet Identity.",
-    "Adding real-time/WebSocket streaming."
+    "Do not claim to run `dfx` commands or provide real command output in the app build; only implement the endpoints so the user can run the commands locally.",
+    "No frontend UI changes are required for this request."
   ],
   "imageRequirements": {
     "required": [],

@@ -1,46 +1,6 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Backend Tester: fix output scrolling and correct live/demo messaging",
-  "requirements": [
-    {
-      "id": "REQ-1",
-      "summary": "Make the Backend Tester bottom output panel reliably scrollable in normal and maximized states while preserving smart auto-scroll behavior.",
-      "acceptanceCriteria": [
-        "When the Backend Tester has enough output to overflow, the output area can be scrolled with mouse wheel/trackpad, scrollbar drag, and touch (where applicable).",
-        "Scrolling works in both windowState='normal' and windowState='maximized'.",
-        "The output panel does not get 'stuck' due to parent container overflow/height constraints; the output region remains the only scrollable region for output content.",
-        "Auto-scroll-to-bottom continues to work when the user is at the bottom; if the user scrolls up, new output does not force-scroll them back down until they return to bottom."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/components/SimulatedBashPanel.tsx",
-          "operation": "modify",
-          "description": "Fix layout/overflow constraints so the output region is the reliable scroll container in both normal and maximized window states (e.g., ensure the panel has a definite height in normal mode, maintain proper flex min-height boundaries). Add touch-friendly scrolling behavior for the output container, and refine auto-scroll detection to only keep pinned-to-bottom when the user is at/near the bottom."
-        }
-      ]
-    },
-    {
-      "id": "REQ-2",
-      "summary": "Update Backend Tester messaging and command metadata to accurately indicate Live vs Demo behavior and remove misleading demo/source text.",
-      "acceptanceCriteria": [
-        "The note/banner text in the Backend Tester no longer implies the entire tester is in demo mode when at least some commands are live backend calls.",
-        "Commands that call the canister (use the actor) are clearly indicated as Live, and commands that return mock data are clearly indicated as Demo (either via label/badge/description).",
-        "Text is consistent between the command list and the informational note (no contradictions like 'demo mode' while running live calls).",
-        "No user-facing text mentions Kraken/API sources that are not actually being used by the command implementation (e.g., remove or correct 'Kraken API' in demo placeholders if it confuses live status)."
-      ],
-      "file_operations": [
-        {
-          "path": "frontend/src/utils/backendTesterCommands.ts",
-          "operation": "modify",
-          "description": "Add explicit command implementation metadata (e.g., Live vs Demo) to each command definition and update command descriptions to match actual behavior. Remove/replace misleading demo placeholders that reference external sources not actually used (e.g., 'Kraken API') so the command list is accurate and consistent."
-        },
-        {
-          "path": "frontend/src/components/SimulatedBashPanel.tsx",
-          "operation": "modify",
-          "description": "Update the Backend Tester informational note/banner to reflect mixed Live/Demo commands (no blanket 'demo mode'). Add clear UI indication per command (e.g., label/badge in buttons and/or tooltip text) using the command metadata from backendTesterCommands.ts, ensuring the list and note are consistent."
-        }
-      ]
-    }
-  ]
+  "title": "Backend-only CoinGecko debug + live-market symbol validation (no frontend changes)",
+  "requirements": []
 }

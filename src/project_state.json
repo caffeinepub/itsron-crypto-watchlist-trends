@@ -1,46 +1,49 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 3,
-  "summary": "Web app/tester that connects via Internet Identity to a backend actor and loads/validates crypto symbols using live CoinGecko data.",
-  "architectural_notes": [],
+  "projectStateVersion": 5,
+  "summary": "IC/Motoko crypto backend canister (itsron_crypto_backend) that fetches live market data (CoinGecko HTTP outcall) and a frontend that must correctly resolve the backend canister ID; currently troubleshooting connectivity/demo-mode and validating live market data calls.",
+  "architectural_notes": [
+    "Frontend depends on a cached backend canister ID (e.g., in localStorage); actor creation can stall if the cached ID is missing/wiped and auto-discovery does not run.",
+    "Backend canister `itsron_crypto_backend` exposes `getLiveMarketData(symbol)` and will add a `debugFetchCoinGecko(symbol)` function that performs an HTTP outcall to the CoinGecko URL builder and returns the raw response for debugging."
+  ],
   "known_issues": [
-    "Bottom panel is not scrolling properly.",
-    "UI still indicates 'demo mode' even though tests are pulling live data."
+    "Clearing browser cache/cookies can wipe the cached backend canister ID, causing the app to remain stuck on “Connecting to backend” (actor never begins fetching; stage remains idle) even when Internet Identity is authenticated."
   ],
   "isFixRequest": true,
-  "existing_features": [
-    {
-      "id": "feature-fix-the-backend-tester-bottom-output-panel-so-it-reliably-scrolls-mouse-wheel-trackpad-scrollbar-drag-and-touch-when-command-output-exceeds-the-visible-height-in-both-normal-and-maximized-window-states",
-      "title": "Fix the Backend Tester bottom output panel so it reliably scrolls (mouse wheel/trackpad, scrollbar drag, and touch) when command output exceeds the visible height, in both normal and maximized window states.",
-      "reqIds": [
-        "REQ-1"
-      ],
-      "version": 1
-    },
-    {
-      "id": "feature-update-the-backend-tester-ui-and-command-definitions-to-stop-showing-a-generic-demo-mode-message-when-live-backend-calls-are-being-used-instead-accurately-reflect-live-vs-demo-behavior-based-on-the-actual-command-implementation",
-      "title": "Update the Backend Tester UI and command definitions to stop showing a generic 'demo mode' message when live backend calls are being used; instead, accurately reflect live vs demo behavior based on the actual command implementation.",
-      "reqIds": [
-        "REQ-2"
-      ],
-      "version": 1
-    }
-  ],
+  "existing_features": [],
   "new_feature_requests": [
     {
       "id": "AR-1",
-      "summary": "Make the bottom panel scroll smoothly / be adjustable so tester output is usable",
+      "summary": "Add a Motoko debug endpoint (debugFetchCoinGecko) to log/return raw CoinGecko HTTP response for a given crypto symbol and use it to validate getLiveMarketData for BTC/ETH/XRP via dfx calls.",
       "reqIds": [],
       "status": "pending"
     },
     {
       "id": "AR-2",
-      "summary": "Ensure UI exits 'demo mode' when tests are pulling live data (sync mode indicator with actual data source)",
-      "reqIds": [],
+      "summary": "Add a public shared Motoko debug endpoint `debugFetchCoinGecko(symbol : CryptoSymbol) : async Text` in `backend/main.mo` that builds the CoinGecko URL for the given symbol, performs the HTTP GET outcall, prints debug logs (URL + raw response), and returns the raw response body as `Text`, matching the user-provided function behavior.",
+      "reqIds": [
+        "REQ-1"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-3",
+      "summary": "Ensure the backend canister exposes `getLiveMarketData(symbol : CryptoSymbol)` callable via `dfx canister call itsron_crypto_backend getLiveMarketData '(\"BTC\")'` / `(\"ETH\")` / `(\"XRP\")`, and that it uses the same CoinGecko URL-building logic as `debugFetchCoinGecko` so live-data failures can be debugged consistently.",
+      "reqIds": [
+        "REQ-2"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-4",
+      "summary": "Preserve the existing user-profile and authorization behavior currently implemented in `backend/main.mo` (profile getters/setter and access control mixin) while adding the new crypto debug and live-market-data functions.",
+      "reqIds": [
+        "REQ-3"
+      ],
       "status": "pending"
     }
   ],
-  "projectName": "Fix Backend Tester output scrolling and correct demo/live mode messaging",
+  "projectName": "Untitled request",
   "clarification_mode": "instant",
   "clarification_rounds": 0
 }

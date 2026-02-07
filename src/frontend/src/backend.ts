@@ -89,7 +89,26 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface http_request_result {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
+export interface TransformationOutput {
+    status: bigint;
+    body: Uint8Array;
+    headers: Array<http_header>;
+}
+export interface TransformationInput {
+    context: Uint8Array;
+    response: http_request_result;
+}
+export type CryptoSymbol = string;
 export interface UserProfile {
+    name: string;
+}
+export interface http_header {
+    value: string;
     name: string;
 }
 export enum UserRole {
@@ -100,11 +119,23 @@ export enum UserRole {
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    /**
+     * / Logs outcall params and returns response as-is for debugging.
+     */
+    debugFetchCoinGecko(symbol: string): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    /**
+     * / Public endpoint to fetch live market data from CoinGecko using crypto symbol.
+     */
+    getLiveMarketData(symbol: CryptoSymbol): Promise<string>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    /**
+     * / Query transform to forward response unchanged.
+     */
+    transformRaw(input: TransformationInput): Promise<TransformationOutput>;
 }
 import type { UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -137,6 +168,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async debugFetchCoinGecko(arg0: string): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.debugFetchCoinGecko(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.debugFetchCoinGecko(arg0);
+            return result;
+        }
+    }
     async getCallerUserProfile(): Promise<UserProfile | null> {
         if (this.processError) {
             try {
@@ -163,6 +208,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getCallerUserRole();
             return from_candid_UserRole_n4(this._uploadFile, this._downloadFile, result);
+        }
+    }
+    async getLiveMarketData(arg0: CryptoSymbol): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getLiveMarketData(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getLiveMarketData(arg0);
+            return result;
         }
     }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
@@ -204,6 +263,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.saveCallerUserProfile(arg0);
+            return result;
+        }
+    }
+    async transformRaw(arg0: TransformationInput): Promise<TransformationOutput> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.transformRaw(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.transformRaw(arg0);
             return result;
         }
     }

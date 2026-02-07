@@ -1,46 +1,4 @@
 {
   "kind": "feature_evidence_report",
-  "features": [
-    {
-      "featureId": "feature-fix-the-backend-tester-bottom-output-panel-so-it-reliably-scrolls-mouse-wheel-trackpad-scrollbar-drag-and-touch-when-command-output-exceeds-the-visible-height-in-both-normal-and-maximized-window-states",
-      "featureTitle": "Fix the Backend Tester bottom output panel so it reliably scrolls (mouse wheel/trackpad, scrollbar drag, and touch) when command output exceeds the visible height, in both normal and maximized window states.",
-      "files": [
-        "frontend/src/components/SimulatedBashPanel.tsx"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "http-outcalls@3.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-1"
-      ],
-      "confidence": "high"
-    },
-    {
-      "featureId": "feature-update-the-backend-tester-ui-and-command-definitions-to-stop-showing-a-generic-demo-mode-message-when-live-backend-calls-are-being-used-instead-accurately-reflect-live-vs-demo-behavior-based-on-the-actual-command-implementation",
-      "featureTitle": "Update the Backend Tester UI and command definitions to stop showing a generic 'demo mode' message when live backend calls are being used; instead, accurately reflect live vs demo behavior based on the actual command implementation.",
-      "files": [
-        "frontend/src/components/SimulatedBashPanel.tsx",
-        "frontend/src/utils/backendTesterCommands.ts"
-      ],
-      "components": [
-        "authorization@4.0.0",
-        "http-outcalls@3.0.0",
-        "core-infrastructure@1.0.2",
-        "shadcn-ui@1.0.0",
-        "build-template-react@1.0.0",
-        "initial-app@1.0.0",
-        "github-export-icp-cli@1.0.0"
-      ],
-      "testIds": [
-        "REQ-2"
-      ],
-      "confidence": "high"
-    }
-  ]
+  "features": []
 }
