@@ -1,48 +1,67 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T14:25:07.638Z",
+  "generatedAt": "2026-02-07T17:18:32.742Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 3,
-    "implemented": 1,
+    "total": 4,
+    "implemented": 2,
     "items": [
       {
-        "id": "REQ-6",
-        "summary": "Ensure the backend canister exposes an admin-only `debugFetchCoinGecko(symbol : CryptoSymbol) : async Text` method that returns the raw CoinGecko HTTP response body as `Text` for supported symbols (BTC, ETH, XRP) and returns the exact error text `\"❌ Error: Could not build URL for symbol: \" # symbol` when the URL cannot be built.",
+        "id": "REQ-18",
+        "summary": "Add backend cycle-safety checks for all CoinGecko HTTPS outcalls so the canister does not reach 0 cycles during `getLiveMarketData(symbol)` / `debugFetchCoinGecko(symbol)` execution. When the cycle balance is below a defined safety threshold, the backend must not attempt the outcall and must return a deterministic, user-facing English error message that clearly indicates the canister is low/out of cycles (and that an admin must top up cycles).",
         "status": "unknown",
         "plannedFiles": [],
         "matchedFiles": []
       },
       {
-        "id": "REQ-7",
-        "summary": "Refactor `getLiveMarketData(symbol : CryptoSymbol)` to use the same CoinGecko URL-building logic as `debugFetchCoinGecko` (i.e., `buildCoinGeckoUrl(symbol)`) so both methods are consistent for BTC/ETH/XRP and unsupported symbol handling is deterministic.",
+        "id": "REQ-19",
+        "summary": "Expose backend cycle diagnostics via new backend methods that the frontend can call without terminal/dfx access: a query method to return current canister cycle balance, plus a structured status method (e.g., balance + configured threshold + a human-readable status string) suitable for display in the in-app tester.",
         "status": "unknown",
         "plannedFiles": [],
         "matchedFiles": []
       },
       {
-        "id": "REQ-8",
-        "summary": "Add a developer-facing documentation file that includes the exact deploy and test commands to validate raw CoinGecko responses via `dfx`, using the canister name `itsron_crypto_backend` and covering BTC, ETH, and XRP.",
+        "id": "REQ-20",
+        "summary": "Add an in-app Cycle Status view in the Backend Tester UI by introducing one or more tester commands (in `frontend/src/utils/backendTesterCommands.ts`) that call the new backend cycle diagnostics methods and render the results in a copy/paste-friendly format in the existing `SimulatedBashPanel`.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/docs/coingecko-debug-dfx.md"
+          "frontend/src/utils/backendTesterCommands.ts",
+          "frontend/src/components/SimulatedBashPanel.tsx"
         ],
         "matchedFiles": [
-          "frontend/docs/coingecko-debug-dfx.md"
+          "frontend/src/utils/backendTesterCommands.ts"
+        ]
+      },
+      {
+        "id": "REQ-21",
+        "summary": "Improve user-facing error handling on the Dashboard crypto cards so cycle-exhaustion failures are understandable: when the live market data request fails with an IC rejection containing ‘out of cycles’ / IC0504, show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/CryptoCard.tsx"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/CryptoCard.tsx"
         ]
       }
     ]
   },
   "changedFiles": [
+    "backend/main.mo",
+    "backend/migration.mo",
     "build-request.json",
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
-    "frontend/docs/coingecko-debug-dfx.md",
+    "frontend/src/backend.d.ts",
+    "frontend/src/backend.ts",
+    "frontend/src/components/CryptoCard.tsx",
+    "frontend/src/declarations/backend.did.d.ts",
+    "frontend/src/declarations/backend.did.js",
+    "frontend/src/utils/backendTesterCommands.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

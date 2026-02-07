@@ -11,6 +11,11 @@ import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
 export type CryptoSymbol = string;
+export interface OutcallCycleStatus {
+  'status' : string,
+  'currentBalance' : bigint,
+  'threshold' : bigint,
+}
 export interface TransformationInput {
   'context' : Uint8Array,
   'response' : http_request_result,
@@ -33,10 +38,13 @@ export interface http_request_result {
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'checkCyclesSafeForOutcall' : ActorMethod<[], boolean>,
   'debugFetchCoinGecko' : ActorMethod<[CryptoSymbol], string>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
+  'getCycleBalance' : ActorMethod<[], bigint>,
   'getLiveMarketData' : ActorMethod<[CryptoSymbol], string>,
+  'getOutcallCycleStatus' : ActorMethod<[], OutcallCycleStatus>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,

@@ -1,4 +1,4 @@
-import { AlertCircle } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import AddCryptoDialog from './AddCryptoDialog';
@@ -16,11 +16,11 @@ export default function WatchlistManager() {
         </div>
       </CardHeader>
       <CardContent>
-        <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
-          <AlertCircle className="h-4 w-4 text-amber-500" />
-          <AlertTitle className="text-amber-700 dark:text-amber-400">Demo Mode</AlertTitle>
+        <Alert variant="default" className="border-blue-500/50 bg-blue-500/10">
+          <Info className="h-4 w-4 text-blue-500" />
+          <AlertTitle className="text-blue-700 dark:text-blue-400">Coming Soon</AlertTitle>
           <AlertDescription className="text-sm">
-            Backend crypto functionality is not yet implemented. Watchlist features will be available once the backend is updated.
+            Watchlist functionality is not yet available. This feature will allow you to track your favorite cryptocurrencies.
           </AlertDescription>
         </Alert>
       </CardContent>

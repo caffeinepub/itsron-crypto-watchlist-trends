@@ -12,6 +12,11 @@ export interface http_request_result {
     body: Uint8Array;
     headers: Array<http_header>;
 }
+export interface OutcallCycleStatus {
+    status: string;
+    currentBalance: bigint;
+    threshold: bigint;
+}
 export interface TransformationOutput {
     status: bigint;
     body: Uint8Array;
@@ -36,10 +41,13 @@ export enum UserRole {
 }
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    checkCyclesSafeForOutcall(): Promise<boolean>;
     debugFetchCoinGecko(symbol: CryptoSymbol): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getCycleBalance(): Promise<bigint>;
     getLiveMarketData(symbol: CryptoSymbol): Promise<string>;
+    getOutcallCycleStatus(): Promise<OutcallCycleStatus>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;

@@ -1,14 +1,18 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 9,
-  "summary": "IC/Motoko crypto backend canister (itsron_crypto_backend) that fetches live market data (CoinGecko HTTP outcall) and a frontend that must correctly resolve the backend canister ID; currently troubleshooting connectivity/demo-mode and validating live market data calls.",
+  "projectStateVersion": 15,
+  "summary": "Project now includes ensuring production reliability of CoinGecko HTTP outcalls by preventing backend canister cycle exhaustion (auto top-ups/monitoring) in addition to live-mode go-live prep and in-app debug/testing.",
   "architectural_notes": [
     "Frontend depends on a cached backend canister ID (e.g., in localStorage); actor creation can stall if the cached ID is missing/wiped and auto-discovery does not run.",
-    "Backend canister `itsron_crypto_backend` exposes `getLiveMarketData(symbol)` and will add a `debugFetchCoinGecko(symbol)` function that performs an HTTP outcall to the CoinGecko URL builder and returns the raw response for debugging."
+    "Backend canister `itsron_crypto_backend` exposes `getLiveMarketData(symbol)` and will add a `debugFetchCoinGecko(symbol)` function that performs an HTTP outcall to the CoinGecko URL builder and returns the raw response for debugging.",
+    "Need an explicit, persistent environment/mode configuration (demo vs live) and a clear path to deploy/verify the live mode in the hosted Caffeine environment.",
+    "Caffeine environment has no terminal/dfx access for the user; CoinGecko raw-response validation must be done via an in-app UI/tester flow that calls canister methods and renders the returned raw response (and any surfaced debug info).",
+    "HTTPS outcalls to CoinGecko require cycles; backend must monitor cycle balance and maintain sufficient cycles (e.g., via auto top-ups) to avoid IC0504 rejections in production."
   ],
   "known_issues": [
     "Clearing browser cache/cookies can wipe the cached backend canister ID, causing the app to remain stuck on “Connecting to backend” (actor never begins fetching; stage remains idle) even when Internet Identity is authenticated.",
-    "Coverage report indicates `debugFetchCoinGecko` has not been added to `backend/main.mo` yet despite a deployment; needs implementation + redeploy + test."
+    "Coverage report indicates `debugFetchCoinGecko` has not been added to `backend/main.mo` yet despite a deployment; needs implementation + redeploy + test.",
+    "Backend canister ran out of cycles, causing IC0504 rejection on CoinGecko HTTPS outcalls and breaking live market data for all symbols until cycles are replenished."
   ],
   "isFixRequest": true,
   "existing_features": [
@@ -17,6 +21,70 @@
       "title": "Add a developer-facing documentation file that includes the exact deploy and test commands to validate raw CoinGecko responses via `dfx`, using the canister name `itsron_crypto_backend` and covering BTC, ETH, and XRP.",
       "reqIds": [
         "REQ-8"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-switch-the-frontend-live-market-data-flow-from-disabled-demo-stubs-to-real-backend-calls-implement-usegetlivemarketdata-symbol-in-frontend-src-hooks-usequeries-ts-to-call-the-backend-actor-s-getlivemarketdata-symbol-and-enable-the-query-when-an-actor-is-available",
+      "title": "Switch the frontend live market data flow from disabled/demo stubs to real backend calls: implement `useGetLiveMarketData(symbol)` in `frontend/src/hooks/useQueries.ts` to call the backend actor’s `getLiveMarketData(symbol)` and enable the query when an actor is available.",
+      "reqIds": [
+        "REQ-10"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-demo-mode-ui-and-mock-values-from-the-dashboard-crypto-cards-update-frontend-src-components-cryptocard-tsx-to-render-the-live-backend-response-price-change-market-cap-as-available-and-remove-all-demo-mode-alerts-and-demo-data-backend-pending-copy-for-these-cards",
+      "title": "Remove demo-mode UI and mock values from the dashboard crypto cards: update `frontend/src/components/CryptoCard.tsx` to render the live backend response (price/change/market cap as available) and remove all “Demo Mode” alerts and “Demo data (backend pending)” copy for these cards.",
+      "reqIds": [
+        "REQ-11"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-backend-tester-commands-so-market-data-related-commands-run-in-live-mode-against-the-backend-actor-instead-of-returning-simulated-demo-responses-at-minimum-the-getlivemarketdata-command-in-frontend-src-utils-backendtestercommands-ts",
+      "title": "Update Backend Tester commands so market-data-related commands run in live mode against the backend actor instead of returning simulated/demo responses (at minimum: the `getLiveMarketData` command in `frontend/src/utils/backendTesterCommands.ts`).",
+      "reqIds": [
+        "REQ-12"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-replace-demo-mode-messaging-in-watchlist-related-ui-components-with-production-safe-coming-soon-messaging-since-watchlist-backend-endpoints-are-not-implemented-update-frontend-src-components-watchlistmanager-tsx-and-frontend-src-components-watchlistpriceticks-tsx-to-remove-demo-mode-labeling-while-keeping-a-clear-non-misleading-status-message-in-english",
+      "title": "Replace demo-mode messaging in watchlist-related UI components with production-safe “Coming soon” messaging (since watchlist backend endpoints are not implemented): update `frontend/src/components/WatchlistManager.tsx` and `frontend/src/components/WatchlistPriceTicks.tsx` to remove “Demo Mode” labeling while keeping a clear, non-misleading status message in English.",
+      "reqIds": [
+        "REQ-13"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-remove-demo-only-labeling-inside-the-analysis-forecast-ui-so-the-app-reads-as-production-ready-update-frontend-src-components-forecastchart-tsx-to-eliminate-demo-data-demonstration-data-backend-pending-copy-and-replace-it-with-neutral-accurate-wording-e-g-sample-data-or-local-simulation-until-a-real-historical-data-backend-exists",
+      "title": "Remove demo-only labeling inside the analysis/forecast UI so the app reads as production-ready: update `frontend/src/components/ForecastChart.tsx` to eliminate “Demo Data / demonstration data / Backend pending” copy and replace it with neutral, accurate wording (e.g., “Sample data” or “Local simulation”) until a real historical-data backend exists.",
+      "reqIds": [
+        "REQ-14"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-expose-the-coingecko-debug-calls-inside-the-live-app-ui-by-adding-three-backend-tester-commands-for-debugfetchcoingecko-btc-eth-xrp-and-rendering-their-full-copy-paste-friendly-output-in-the-tester-panel",
+      "title": "Expose the CoinGecko debug calls inside the live app UI by adding three Backend Tester commands for `debugFetchCoinGecko` (BTC, ETH, XRP) and rendering their full, copy/paste-friendly output in the tester panel.",
+      "reqIds": [
+        "REQ-17"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-add-an-in-app-cycle-status-view-in-the-backend-tester-ui-by-introducing-one-or-more-tester-commands-in-frontend-src-utils-backendtestercommands-ts-that-call-the-new-backend-cycle-diagnostics-methods-and-render-the-results-in-a-copy-paste-friendly-format-in-the-existing-simulatedbashpanel",
+      "title": "Add an in-app Cycle Status view in the Backend Tester UI by introducing one or more tester commands (in `frontend/src/utils/backendTesterCommands.ts`) that call the new backend cycle diagnostics methods and render the results in a copy/paste-friendly format in the existing `SimulatedBashPanel`.",
+      "reqIds": [
+        "REQ-20"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-improve-user-facing-error-handling-on-the-dashboard-crypto-cards-so-cycle-exhaustion-failures-are-understandable-when-the-live-market-data-request-fails-with-an-ic-rejection-containing-out-of-cycles-ic0504-show-a-concise-english-message-indicating-the-backend-is-out-of-cycles-and-live-data-is-temporarily-unavailable-until-cycles-are-topped-up",
+      "title": "Improve user-facing error handling on the Dashboard crypto cards so cycle-exhaustion failures are understandable: when the live market data request fails with an IC rejection containing ‘out of cycles’ / IC0504, show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
+      "reqIds": [
+        "REQ-21"
       ],
       "version": 1
     }
@@ -81,6 +149,70 @@
       "summary": "Refactor `getLiveMarketData(symbol : CryptoSymbol)` to use the same CoinGecko URL-building logic as `debugFetchCoinGecko` (i.e., `buildCoinGeckoUrl(symbol)`) so both methods are consistent for BTC/ETH/XRP and unsupported symbol handling is deterministic.",
       "reqIds": [
         "REQ-7"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-9",
+      "summary": "Disable/demo-mode removal and switch the app to live/production mode (ensure real backend connectivity and live market data usage instead of demo behavior), then redeploy and validate end-to-end.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-10",
+      "summary": "Update the backend so `getLiveMarketData(symbol : CryptoSymbol)` uses the same CoinGecko URL-building logic as `buildCoinGeckoUrl(symbol)` (the same logic used by `debugFetchCoinGecko`) and returns a deterministic, user-facing error message when the symbol is unsupported.",
+      "reqIds": [
+        "REQ-9"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-11",
+      "summary": "Add an in-app (live app UI) tester panel/buttons to run `debugFetchCoinGecko(\"BTC\")`, `(\"ETH\")`, and `(\"XRP\")` and display the full results to the user (including the equivalent command string shown, any available debug/log text, and the raw JSON response body in quotes) since the user has no terminal/dfx access.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-12",
+      "summary": "Add a new admin-only backend method `debugFetchCoinGecko(symbol : CryptoSymbol) : async Text` in `backend/main.mo` that fetches the raw CoinGecko HTTP response for the given symbol and returns a single Text payload suitable for copy/paste debugging in the live app.",
+      "reqIds": [
+        "REQ-15"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-13",
+      "summary": "Keep `getLiveMarketData(symbol : CryptoSymbol)` behavior intact, but ensure it continues to use the existing `buildCoinGeckoUrl(symbol)` mapping so both `getLiveMarketData` and `debugFetchCoinGecko` are consistent for BTC/ETH/XRP and unsupported symbols remain deterministic.",
+      "reqIds": [
+        "REQ-16"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-14",
+      "summary": "Prevent CoinGecko HTTP outcalls from failing due to cycle exhaustion by adding backend cycle-balance checks and an automatic top-up strategy (so the canister does not reach 0 cycles during outcalls).",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-15",
+      "summary": "Add an in-app UI/tester display for backend canister cycle status (e.g., remaining cycles / last top-up) so cycle-related failures can be diagnosed without terminal/dfx access.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-16",
+      "summary": "Add backend cycle-safety checks for all CoinGecko HTTPS outcalls so the canister does not reach 0 cycles during `getLiveMarketData(symbol)` / `debugFetchCoinGecko(symbol)` execution. When the cycle balance is below a defined safety threshold, the backend must not attempt the outcall and must return a deterministic, user-facing English error message that clearly indicates the canister is low/out of cycles (and that an admin must top up cycles).",
+      "reqIds": [
+        "REQ-18"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-17",
+      "summary": "Expose backend cycle diagnostics via new backend methods that the frontend can call without terminal/dfx access: a query method to return current canister cycle balance, plus a structured status method (e.g., balance + configured threshold + a human-readable status string) suitable for display in the in-app tester.",
+      "reqIds": [
+        "REQ-19"
       ],
       "status": "pending"
     }

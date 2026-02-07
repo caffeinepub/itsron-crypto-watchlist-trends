@@ -2,10 +2,10 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-a-developer-facing-documentation-file-that-includes-the-exact-deploy-and-test-commands-to-validate-raw-coingecko-responses-via-dfx-using-the-canister-name-itsron-crypto-backend-and-covering-btc-eth-and-xrp",
-      "featureTitle": "Add a developer-facing documentation file that includes the exact deploy and test commands to validate raw CoinGecko responses via `dfx`, using the canister name `itsron_crypto_backend` and covering BTC, ETH, and XRP.",
+      "featureId": "feature-add-an-in-app-cycle-status-view-in-the-backend-tester-ui-by-introducing-one-or-more-tester-commands-in-frontend-src-utils-backendtestercommands-ts-that-call-the-new-backend-cycle-diagnostics-methods-and-render-the-results-in-a-copy-paste-friendly-format-in-the-existing-simulatedbashpanel",
+      "featureTitle": "Add an in-app Cycle Status view in the Backend Tester UI by introducing one or more tester commands (in `frontend/src/utils/backendTesterCommands.ts`) that call the new backend cycle diagnostics methods and render the results in a copy/paste-friendly format in the existing `SimulatedBashPanel`.",
       "files": [
-        "frontend/docs/coingecko-debug-dfx.md"
+        "frontend/src/utils/backendTesterCommands.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -17,7 +17,27 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-8"
+        "REQ-20"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-improve-user-facing-error-handling-on-the-dashboard-crypto-cards-so-cycle-exhaustion-failures-are-understandable-when-the-live-market-data-request-fails-with-an-ic-rejection-containing-out-of-cycles-ic0504-show-a-concise-english-message-indicating-the-backend-is-out-of-cycles-and-live-data-is-temporarily-unavailable-until-cycles-are-topped-up",
+      "featureTitle": "Improve user-facing error handling on the Dashboard crypto cards so cycle-exhaustion failures are understandable: when the live market data request fails with an IC rejection containing ‘out of cycles’ / IC0504, show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
+      "files": [
+        "frontend/src/components/CryptoCard.tsx"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "http-outcalls@3.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-21"
       ],
       "confidence": "high"
     }

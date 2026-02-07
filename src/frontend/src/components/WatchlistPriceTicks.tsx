@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Activity, AlertCircle } from 'lucide-react';
+import { Activity, Info } from 'lucide-react';
 
 export default function WatchlistPriceTicks() {
   return (
@@ -13,11 +13,11 @@ export default function WatchlistPriceTicks() {
         <CardDescription>Real-time price updates for your watchlist</CardDescription>
       </CardHeader>
       <CardContent>
-        <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
-          <AlertCircle className="h-4 w-4 text-amber-500" />
-          <AlertTitle className="text-amber-700 dark:text-amber-400">Demo Mode</AlertTitle>
+        <Alert variant="default" className="border-blue-500/50 bg-blue-500/10">
+          <Info className="h-4 w-4 text-blue-500" />
+          <AlertTitle className="text-blue-700 dark:text-blue-400">Coming Soon</AlertTitle>
           <AlertDescription className="text-sm">
-            Backend crypto functionality is not yet implemented. Live price ticks will be available once the backend is updated.
+            Real-time price tracking is not yet available. This feature will display live price updates for cryptocurrencies in your watchlist.
           </AlertDescription>
         </Alert>
       </CardContent>

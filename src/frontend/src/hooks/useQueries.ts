@@ -4,18 +4,13 @@ import { useInternetIdentity } from './useInternetIdentity';
 import type { Principal } from '@icp-sdk/core/principal';
 import type {
   UserProfile,
-  UserRole
+  UserRole,
+  CryptoSymbol
 } from '../backend';
 
 // Temporary types for crypto functionality (backend not yet implemented)
-type CryptoSymbol = string;
 type DisplaySymbol = string;
 type SymbolPair = string;
-type LiveMarketResponse = {
-  price: number;
-  change24h: number;
-  marketCap: number;
-} | null;
 
 // ============================================================================
 // USER PROFILE QUERIES
@@ -105,6 +100,28 @@ export function useGetCallerUserRole() {
 }
 
 // ============================================================================
+// CRYPTO FUNCTIONALITY - LIVE MARKET DATA
+// ============================================================================
+
+export function useGetLiveMarketData(symbol: CryptoSymbol) {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { isInitializing } = useInternetIdentity();
+
+  return useQuery<string>({
+    queryKey: ['liveMarketData', symbol],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.getLiveMarketData(symbol);
+    },
+    enabled: !!actor && !actorFetching && !isInitializing,
+    retry: 2,
+    retryDelay: 1000,
+    staleTime: 30000, // Consider data fresh for 30 seconds
+    refetchInterval: 60000, // Refetch every minute
+  });
+}
+
+// ============================================================================
 // CRYPTO FUNCTIONALITY STUBS (Backend not yet implemented)
 // ============================================================================
 
@@ -113,14 +130,6 @@ export function useRegisterSelfAsUser() {
     mutationFn: async () => {
       throw new Error('Backend functionality not yet implemented');
     },
-  });
-}
-
-export function useGetLiveMarketData(_symbol: CryptoSymbol) {
-  return useQuery<LiveMarketResponse>({
-    queryKey: ['liveMarketData', _symbol],
-    queryFn: async () => null,
-    enabled: false,
   });
 }
 

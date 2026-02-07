@@ -94,6 +94,11 @@ export interface http_request_result {
     body: Uint8Array;
     headers: Array<http_header>;
 }
+export interface OutcallCycleStatus {
+    status: string;
+    currentBalance: bigint;
+    threshold: bigint;
+}
 export interface TransformationOutput {
     status: bigint;
     body: Uint8Array;
@@ -119,10 +124,13 @@ export enum UserRole {
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    checkCyclesSafeForOutcall(): Promise<boolean>;
     debugFetchCoinGecko(symbol: CryptoSymbol): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
+    getCycleBalance(): Promise<bigint>;
     getLiveMarketData(symbol: CryptoSymbol): Promise<string>;
+    getOutcallCycleStatus(): Promise<OutcallCycleStatus>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
@@ -156,6 +164,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.assignCallerUserRole(arg0, to_candid_UserRole_n1(this._uploadFile, this._downloadFile, arg1));
+            return result;
+        }
+    }
+    async checkCyclesSafeForOutcall(): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.checkCyclesSafeForOutcall();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.checkCyclesSafeForOutcall();
             return result;
         }
     }
@@ -201,6 +223,20 @@ export class Backend implements backendInterface {
             return from_candid_UserRole_n4(this._uploadFile, this._downloadFile, result);
         }
     }
+    async getCycleBalance(): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getCycleBalance();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getCycleBalance();
+            return result;
+        }
+    }
     async getLiveMarketData(arg0: CryptoSymbol): Promise<string> {
         if (this.processError) {
             try {
@@ -212,6 +248,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.getLiveMarketData(arg0);
+            return result;
+        }
+    }
+    async getOutcallCycleStatus(): Promise<OutcallCycleStatus> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getOutcallCycleStatus();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getOutcallCycleStatus();
             return result;
         }
     }

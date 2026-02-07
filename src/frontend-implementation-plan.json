@@ -1,20 +1,42 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Add developer documentation for validating CoinGecko debug fetch via dfx",
+  "title": "Cycle diagnostics in Backend Tester + clearer cycle-exhaustion errors on Dashboard",
   "requirements": [
     {
-      "id": "REQ-8",
-      "summary": "Add a developer-facing documentation file with the exact dfx deploy and test commands for debugFetchCoinGecko (BTC/ETH/XRP) using canister name itsron_crypto_backend.",
+      "id": "REQ-20",
+      "summary": "Add Backend Tester diagnostic command(s) to fetch and display canister cycle balance/status in the SimulatedBashPanel output.",
       "acceptanceCriteria": [
-        "Repo contains a new documentation file (e.g., under a `docs/` directory or in `README.md`) with the deploy command and the three `dfx canister call` examples for BTC/ETH/XRP exactly as provided by the user (user-facing text in English).",
-        "The documented commands, when run after deployment, successfully execute against the local/dev environment without requiring code changes to follow the steps."
+        "A new diagnostic command (or commands) appears under an appropriate category (preferably “Phase 3: Diagnostic Tools”) to fetch and display cycle balance/status.",
+        "Running the command prints a readable output showing at minimum: current cycle balance and the configured low-cycles threshold.",
+        "The output is displayed in the existing terminal output area and is copyable like other command outputs."
       ],
       "file_operations": [
         {
-          "path": "frontend/docs/coingecko-debug-dfx.md",
-          "operation": "create",
-          "description": "Create developer documentation in English that includes the exact commands provided in the BuildRequest to deploy and test raw CoinGecko responses via dfx using canister name `itsron_crypto_backend`, covering BTC, ETH, and XRP."
+          "path": "frontend/src/utils/backendTesterCommands.ts",
+          "operation": "modify",
+          "description": "Add one or more new 'Phase 3: Diagnostic Tools' commands that call the backend actor cycle diagnostics methods (e.g., getCycleBalance() and getOutcallCycleStatus()) and render copy/paste-friendly output (plain text with newlines) including current balance and threshold."
+        },
+        {
+          "path": "frontend/src/components/SimulatedBashPanel.tsx",
+          "operation": "modify",
+          "description": "Verify the category list rendered in the Backend Tester includes 'phase3-diagnostics' (Phase 3: Diagnostic Tools) so the new cycle diagnostic command(s) appear and can be executed within the existing terminal UI."
+        }
+      ]
+    },
+    {
+      "id": "REQ-21",
+      "summary": "Show a clear, cycle-exhaustion-specific error message on Dashboard crypto cards when the live market data call fails due to out-of-cycles / IC0504.",
+      "acceptanceCriteria": [
+        "When `useGetLiveMarketData(symbol)` errors with a message containing ‘out of cycles’ or ‘IC0504’, `frontend/src/components/CryptoCard.tsx` displays an English error message that explicitly mentions cycle exhaustion as the cause.",
+        "Other errors continue to display their existing error behavior (do not replace all error messages with the cycles message).",
+        "The new message does not mention demo mode and does not imply the user can self-fix without admin action."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/CryptoCard.tsx",
+          "operation": "modify",
+          "description": "Update the error rendering logic to detect cycle-exhaustion failures (error message contains 'out of cycles' and/or 'IC0504') and replace only those cases with a concise English message stating the backend is out of cycles and live data is temporarily unavailable until an admin tops up cycles; keep existing behavior for all other errors."
         }
       ]
     }

@@ -1,83 +1,105 @@
 {
   "kind": "build_request",
-  "title": "Deploy and validate CoinGecko debug fetch via dfx (BTC/ETH/XRP)",
-  "priority": "normal",
+  "title": "Prevent CoinGecko outcalls from failing due to canister cycle exhaustion + add in-app cycle diagnostics",
+  "priority": "high",
   "requirements": [
     {
-      "id": "REQ-6",
-      "text": "Ensure the backend canister exposes an admin-only `debugFetchCoinGecko(symbol : CryptoSymbol) : async Text` method that returns the raw CoinGecko HTTP response body as `Text` for supported symbols (BTC, ETH, XRP) and returns the exact error text `\"❌ Error: Could not build URL for symbol: \" # symbol` when the URL cannot be built.",
+      "id": "REQ-18",
+      "text": "Add backend cycle-safety checks for all CoinGecko HTTPS outcalls so the canister does not reach 0 cycles during `getLiveMarketData(symbol)` / `debugFetchCoinGecko(symbol)` execution. When the cycle balance is below a defined safety threshold, the backend must not attempt the outcall and must return a deterministic, user-facing English error message that clearly indicates the canister is low/out of cycles (and that an admin must top up cycles).",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-5"
         ],
         "quotes": [
-          "Now deploy and test the debug function to see the raw CoinGecko responses:"
+          "Fix Cycles Now"
         ]
       },
       "acceptanceCriteria": [
-        "`dfx canister call itsron_crypto_backend debugFetchCoinGecko '(\"BTC\")'` returns a raw CoinGecko response body as a `Text` value (not a trap).",
-        "`dfx canister call itsron_crypto_backend debugFetchCoinGecko '(\"ETH\")'` returns a raw CoinGecko response body as a `Text` value (not a trap).",
-        "`dfx canister call itsron_crypto_backend debugFetchCoinGecko '(\"XRP\")'` returns a raw CoinGecko response body as a `Text` value (not a trap).",
-        "Calling `debugFetchCoinGecko` with an unsupported symbol returns exactly: `❌ Error: Could not build URL for symbol: <SYMBOL>` (with the provided symbol appended).",
-        "`debugFetchCoinGecko` traps with an authorization error for non-admin callers (admin-only gating remains enforced)."
+        "Calling `getLiveMarketData(\"BTC\")`/`(\"ETH\")`/`(\"XRP\")` when cycles are below the configured threshold returns a clear English error string indicating low/out-of-cycles and does not attempt the HTTPS outcall.",
+        "Calling `debugFetchCoinGecko(\"BTC\")`/`(\"ETH\")`/`(\"XRP\")` when cycles are below the configured threshold returns the same class of clear low/out-of-cycles error and does not attempt the HTTPS outcall.",
+        "When cycles are sufficient, both methods continue to perform the HTTPS outcall and return the raw response `Text` as they do today.",
+        "No change to existing authorization rules: `getLiveMarketData` remains user-permission-gated; `debugFetchCoinGecko` remains admin-only."
       ]
     },
     {
-      "id": "REQ-7",
-      "text": "Refactor `getLiveMarketData(symbol : CryptoSymbol)` to use the same CoinGecko URL-building logic as `debugFetchCoinGecko` (i.e., `buildCoinGeckoUrl(symbol)`) so both methods are consistent for BTC/ETH/XRP and unsupported symbol handling is deterministic.",
+      "id": "REQ-19",
+      "text": "Expose backend cycle diagnostics via new backend methods that the frontend can call without terminal/dfx access: a query method to return current canister cycle balance, plus a structured status method (e.g., balance + configured threshold + a human-readable status string) suitable for display in the in-app tester.",
       "target": "backend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-5"
         ],
         "quotes": [
-          "Now deploy and test the debug function to see the raw CoinGecko responses:"
+          "Fix Cycles Now"
         ]
       },
       "acceptanceCriteria": [
-        "For BTC/ETH/XRP, `getLiveMarketData` uses the same final URL string that `debugFetchCoinGecko` would log/print for the same symbol.",
-        "For unsupported symbols, `getLiveMarketData` returns a clear English error string (no traps) indicating the symbol is unsupported.",
-        "`dfx canister call itsron_crypto_backend getLiveMarketData '(\"BTC\")'` returns a raw CoinGecko response body as `Text` (JSON string) for an authorized user caller."
+        "Backend exposes a query method that returns the current cycle balance (as a numeric type that can be reliably displayed in the UI).",
+        "Backend exposes a method that returns a cycle status payload that includes: current balance, the low-cycles threshold value used by the outcall guards, and a status indicator/message in English (e.g., OK/LOW/CRITICAL).",
+        "Cycle status methods are callable from the existing frontend actor without requiring any changes to immutable frontend hook files."
       ]
     },
     {
-      "id": "REQ-8",
-      "text": "Add a developer-facing documentation file that includes the exact deploy and test commands to validate raw CoinGecko responses via `dfx`, using the canister name `itsron_crypto_backend` and covering BTC, ETH, and XRP.",
-      "target": "unknown",
+      "id": "REQ-20",
+      "text": "Add an in-app Cycle Status view in the Backend Tester UI by introducing one or more tester commands (in `frontend/src/utils/backendTesterCommands.ts`) that call the new backend cycle diagnostics methods and render the results in a copy/paste-friendly format in the existing `SimulatedBashPanel`.",
+      "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-4"
+          "msg-5"
         ],
         "quotes": [
-          "bashdfx deploy itsron_crypto_backend",
-          "# Test BTC",
-          "dfx canister call itsron_crypto_backend debugFetchCoinGecko '(\"BTC\")'",
-          "# Test ETH  ",
-          "dfx canister call itsron_crypto_backend debugFetchCoinGecko '(\"ETH\")'",
-          "# Test XRP",
-          "dfx canister call itsron_crypto_backend debugFetchCoinGecko '(\"XRP\")'"
+          "Fix Cycles Now"
         ]
       },
       "acceptanceCriteria": [
-        "Repo contains a new documentation file (e.g., under a `docs/` directory or in `README.md`) with the deploy command and the three `dfx canister call` examples for BTC/ETH/XRP exactly as provided by the user (user-facing text in English).",
-        "The documented commands, when run after deployment, successfully execute against the local/dev environment without requiring code changes to follow the steps."
+        "A new diagnostic command (or commands) appears under an appropriate category (preferably “Phase 3: Diagnostic Tools”) to fetch and display cycle balance/status.",
+        "Running the command prints a readable output showing at minimum: current cycle balance and the configured low-cycles threshold.",
+        "The output is displayed in the existing terminal output area and is copyable like other command outputs."
+      ]
+    },
+    {
+      "id": "REQ-21",
+      "text": "Improve user-facing error handling on the Dashboard crypto cards so cycle-exhaustion failures are understandable: when the live market data request fails with an IC rejection containing ‘out of cycles’ / IC0504, show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-5"
+        ],
+        "quotes": [
+          "Fix Cycles Now"
+        ]
+      },
+      "acceptanceCriteria": [
+        "When `useGetLiveMarketData(symbol)` errors with a message containing ‘out of cycles’ or ‘IC0504’, `frontend/src/components/CryptoCard.tsx` displays an English error message that explicitly mentions cycle exhaustion as the cause.",
+        "Other errors continue to display their existing error behavior (do not replace all error messages with the cycles message).",
+        "The new message does not mention demo mode and does not imply the user can self-fix without admin action."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain a single Motoko actor in `backend/main.mo` (no additional backend services).",
-    "Preserve existing user-profile storage and authorization behavior already implemented in `backend/main.mo`.",
-    "Do not modify any files under `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, or `frontend/src/components/ui`.",
-    "Use English for any user-facing text."
+    "Backend must remain single-actor; all Motoko logic stays in `backend/main.mo`.",
+    "Do not edit frontend files under `frontend/src/components/ui`, `frontend/src/hooks/useInternetIdentity.ts(x)`, `frontend/src/hooks/useActor.ts`, or `frontend/src/main.tsx` (compose around them instead).",
+    "Use English for any user-facing text.",
+    "Do not add additional backend canisters/services for cycle management (single backend only)."
   ],
   "nonGoals": [
-    "Fixing the frontend “Connecting to backend” caching/canister-ID issue (not requested in the latest message).",
-    "Adding new cryptocurrencies beyond BTC, ETH, and XRP.",
-    "Adding third-party services, databases, or non-Motoko backend components."
+    "Implementing true ‘automatic top-ups’ from an external cycles wallet/ledger/cycles-minting flow (not possible purely from inside a single canister without external funding).",
+    "Adding third-party monitoring/alerting integrations.",
+    "Adding new product features unrelated to cycle reliability."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
+  },
+  "userProfileUpdate": {
+    "goalsToAdd": [],
+    "goalsToRemove": [],
+    "preferencesToAdd": [],
+    "preferencesToRemove": [],
+    "miscToAdd": [],
+    "miscToRemove": [],
+    "fieldsToSet": {},
+    "fieldsToDelete": []
   }
 }

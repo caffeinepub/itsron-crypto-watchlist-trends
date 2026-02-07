@@ -29,11 +29,11 @@ export default function ForecastChart({
   movingAveragePeriod = 7,
   forecastHorizon = 5 
 }: ForecastChartProps) {
-  // Generate mock historical data for demonstration
+  // Generate sample historical data for local simulation
   const historicalData = useMemo(() => {
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
-    const basePrice = 50000; // Base price for demonstration
+    const basePrice = 50000; // Base price for simulation
     const data: HistoricalDataPoint[] = [];
     
     for (let i = 30; i >= 0; i--) {
@@ -177,7 +177,7 @@ export default function ForecastChart({
           ))}
           <div className="pt-2 mt-2 border-t border-border">
             <div className="flex items-center justify-between gap-4 text-xs">
-              <span className="text-muted-foreground">Predicted % Change:</span>
+              <span className="text-muted-foreground">% Change:</span>
               <span className={`font-mono font-semibold ${percentChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
                 {percentChange >= 0 ? '+' : ''}{percentChange.toFixed(2)}%
               </span>
@@ -188,152 +188,111 @@ export default function ForecastChart({
     );
   };
 
-  if (historicalData.length < 2) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Forecast Chart</CardTitle>
-          <CardDescription>Need more data</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
-            <Info className="h-4 w-4 text-amber-500" />
-            <AlertTitle className="text-amber-700 dark:text-amber-400">Demo Data</AlertTitle>
-            <AlertDescription className="text-sm">
-              This chart displays demonstration data. Backend crypto functionality is not yet implemented.
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <Alert variant="default" className="border-blue-500/50 bg-blue-500/10">
+        <Info className="h-4 w-4 text-blue-500" />
+        <AlertTitle className="text-blue-700 dark:text-blue-400">Sample Data</AlertTitle>
+        <AlertDescription className="text-sm">
+          This chart displays locally generated sample data for demonstration purposes. Historical price data from the backend is not yet available.
+        </AlertDescription>
+      </Alert>
+
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <CardTitle>BTC Analysis</CardTitle>
-              </div>
+            <div>
+              <CardTitle>{symbol} Analysis</CardTitle>
               <CardDescription>
-                Linear regression analysis based on {stats!.dataPoints} days of demonstration data
+                Price trends and forecast based on sample data
               </CardDescription>
             </div>
-            <Badge variant="outline">Linear Regression</Badge>
+            {stats && (
+              <Badge variant={stats.predictedChange >= 0 ? 'default' : 'destructive'} className="gap-1">
+                {stats.predictedChange >= 0 ? (
+                  <TrendingUp className="h-3 w-3" />
+                ) : (
+                  <TrendingDown className="h-3 w-3" />
+                )}
+                {Math.abs(stats.predictedChange).toFixed(2)}%
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3 mb-6">
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Current (Last Data Point)</p>
-              <p className="text-2xl font-bold">{formatPrice(stats!.lastActual)}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Predicted ({forecastHorizon} periods ahead)</p>
-              <p className="text-2xl font-bold">{formatPrice(stats!.futurePredicted)}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-sm text-muted-foreground">Predicted Change</p>
-              <div className="flex items-center gap-2">
-                <p className="text-2xl font-bold">{stats!.predictedChange.toFixed(2)}%</p>
-                <Badge variant={stats!.predictedChange >= 0 ? 'default' : 'destructive'}>
-                  {stats!.predictedChange >= 0 ? (
-                    <TrendingUp className="h-3 w-3" />
-                  ) : (
-                    <TrendingDown className="h-3 w-3" />
-                  )}
-                </Badge>
-              </div>
-            </div>
-          </div>
-
           <div className="h-[400px]">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" opacity={0.05} />
-                <XAxis
-                  dataKey="date"
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="date" 
                   className="text-xs"
                   tick={{ fill: 'hsl(var(--muted-foreground))' }}
                 />
-                <YAxis
+                <YAxis 
+                  tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
                   className="text-xs"
                   tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                  tickFormatter={(value) => `$${value.toFixed(2)}`}
                 />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="actual"
-                  stroke="oklch(0.75 0.25 145)"
+                <Legend 
+                  wrapperStyle={{ paddingTop: '20px' }}
+                  iconType="line"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="actual" 
+                  stroke="oklch(0.75 0.20 145)" 
+                  name="Price"
                   strokeWidth={2}
                   dot={false}
-                  activeDot={false}
-                  name="Price"
                   connectNulls
                 />
-                <Line
-                  type="monotone"
-                  dataKey="predicted"
-                  stroke="oklch(0.65 0.25 240)"
+                <Line 
+                  type="monotone" 
+                  dataKey="predicted" 
+                  stroke="oklch(0.70 0.25 240)" 
+                  name="Regression"
                   strokeWidth={2}
                   strokeDasharray="5 5"
                   dot={false}
-                  activeDot={false}
-                  name="Regression"
+                  connectNulls
                 />
-                <Line
-                  type="monotone"
-                  dataKey="movingAverage"
-                  stroke="oklch(0.70 0.20 50)"
+                <Line 
+                  type="monotone" 
+                  dataKey="movingAverage" 
+                  stroke="oklch(0.72 0.22 50)" 
+                  name="Moving Average"
                   strokeWidth={2}
                   dot={false}
-                  activeDot={false}
-                  name={`Moving Average (${movingAveragePeriod})`}
                   connectNulls
                 />
               </LineChart>
             </ResponsiveContainer>
           </div>
 
-          <div className="mt-6 p-4 rounded-lg bg-muted/50 space-y-2">
-            <div className="flex items-center gap-2 mb-2">
-              <h4 className="font-semibold text-sm">Analysis Details</h4>
-            </div>
-            <div className="grid gap-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Forecast Method:</span>
-                <span className="font-mono">Linear Regression</span>
+          {stats && (
+            <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+              <div>
+                <p className="text-xs text-muted-foreground">Current Price</p>
+                <p className="text-lg font-semibold">{formatPrice(stats.lastActual)}</p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Regression Slope:</span>
-                <span className="font-mono">{stats!.slope.toFixed(4)}</span>
+              <div>
+                <p className="text-xs text-muted-foreground">Forecast ({forecastHorizon}d)</p>
+                <p className="text-lg font-semibold">{formatPrice(stats.futurePredicted)}</p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">R² (Goodness of Fit):</span>
-                <span className="font-mono">{stats!.r2.toFixed(4)}</span>
+              <div>
+                <p className="text-xs text-muted-foreground">Predicted Change</p>
+                <p className={`text-lg font-semibold ${stats.predictedChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                  {stats.predictedChange >= 0 ? '+' : ''}{stats.predictedChange.toFixed(2)}%
+                </p>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Historical Data Points:</span>
-                <span className="font-mono">{stats!.dataPoints} days</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Moving Average Period:</span>
-                <span className="font-mono">{movingAveragePeriod} days</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Forecast Horizon:</span>
-                <span className="font-mono">{forecastHorizon} days</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Data Source:</span>
-                <span className="font-mono text-xs">Demo (Backend pending)</span>
+              <div>
+                <p className="text-xs text-muted-foreground">Model Fit (R²)</p>
+                <p className="text-lg font-semibold">{stats.r2.toFixed(3)}</p>
               </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -342,7 +301,7 @@ export default function ForecastChart({
 
 function calculateR2(actual: number[], predicted: number[]): number {
   const mean = actual.reduce((a, b) => a + b, 0) / actual.length;
-  const ssTotal = actual.reduce((sum, y) => sum + Math.pow(y - mean, 2), 0);
-  const ssResidual = actual.reduce((sum, y, i) => sum + Math.pow(y - predicted[i], 2), 0);
-  return 1 - ssResidual / ssTotal;
+  const ssTotal = actual.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0);
+  const ssResidual = actual.reduce((sum, val, i) => sum + Math.pow(val - predicted[i], 2), 0);
+  return 1 - (ssResidual / ssTotal);
 }

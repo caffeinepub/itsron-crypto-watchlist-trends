@@ -4,9 +4,12 @@ import Runtime "mo:core/Runtime";
 import AccessControl "authorization/access-control";
 import OutCall "http-outcalls/outcall";
 import MixinAuthorization "authorization/MixinAuthorization";
-import Debug "mo:core/Debug";
 import Text "mo:core/Text";
+import Migration "migration";
+import Nat "mo:core/Nat";
+import Cycles "mo:core/Cycles";
 
+(with migration = Migration.run)
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -18,6 +21,44 @@ actor {
   public type CryptoSymbol = Text; // "BTC", "ETH", "XRP" allowed
 
   let userProfiles = Map.empty<Principal, UserProfile>();
+
+  // Cycle threshold for safe outcalls (currently set to 100B)
+  var outcallThresholdCycles : Nat = 100_000_000_000;
+
+  public type OutcallCycleStatus = {
+    currentBalance : Nat;
+    threshold : Nat;
+    status : Text;
+  };
+
+  // Get current cycle balance in Nats
+  public query ({ caller }) func getCycleBalance() : async Nat {
+    Cycles.balance();
+  };
+
+  // Check if cycle balance is above threshold
+  public shared ({ caller }) func checkCyclesSafeForOutcall() : async Bool {
+    Cycles.balance() > outcallThresholdCycles;
+  };
+
+  // Get detailed outcall cycle status
+  public shared ({ caller }) func getOutcallCycleStatus() : async OutcallCycleStatus {
+    let balance = Cycles.balance();
+
+    let status = if (balance > outcallThresholdCycles) {
+      "✅ Sufficient cycles for safe outcalls";
+    } else if (balance > (outcallThresholdCycles / 2)) {
+      "⚠️ Warning: Cycle balance below threshold";
+    } else {
+      "❌ Critical: Outcalls not possible, immediate top-up required";
+    };
+
+    {
+      currentBalance = balance;
+      threshold = outcallThresholdCycles;
+      status;
+    };
+  };
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
@@ -40,49 +81,6 @@ actor {
     userProfiles.add(caller, profile);
   };
 
-  func mapToApiId(symbol : Text) : ?Text {
-    switch (symbol) {
-      case ("BTC") { ?"bitcoin" };
-      case ("ETH") { ?"ethereum" };
-      case ("XRP") { ?"ripple" };
-      case (_) { null };
-    };
-  };
-
-  public shared ({ caller }) func getLiveMarketData(symbol : CryptoSymbol) : async Text {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
-      Runtime.trap("Unauthorized: Only users can fetch live market data");
-    };
-
-    let apiId = switch (mapToApiId(symbol)) {
-      case (?id) { id };
-      case (null) {
-        return "Unsupported symbol: " # symbol # ". Only BTC, ETH, and XRP supported.";
-      };
-    };
-
-    let url = "https://api.coingecko.com/api/v3/simple/price?ids=" # apiId # "&vs_currencies=usd";
-    await OutCall.httpGetRequest(url, [], transformRaw);
-  };
-
-  public shared ({ caller }) func debugFetchCoinGecko(symbol : CryptoSymbol) : async Text {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can use debug functions");
-    };
-
-    let url = switch (buildCoinGeckoUrl(symbol)) {
-      case (?url) {
-        Debug.print("DEBUG: Fetching from: " # url);
-        url;
-      };
-      case (null) {
-        return "❌ Error: Could not build URL for symbol: " # symbol;
-      };
-    };
-
-    await debugHttpRequest(url);
-  };
-
   func buildCoinGeckoUrl(symbol : CryptoSymbol) : ?Text {
     func baseUrl(id : Text) : Text {
       "https://api.coingecko.com/api/v3/simple/price?ids=" # id # "&vs_currencies=usd";
@@ -96,13 +94,58 @@ actor {
     };
   };
 
+  public shared ({ caller }) func getLiveMarketData(symbol : CryptoSymbol) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can fetch live market data");
+    };
+
+    let url = switch (buildCoinGeckoUrl(symbol)) {
+      case (?url) { url };
+      case (null) {
+        return "❌ Unsupported symbol: " # symbol # ". Only BTC, ETH, and XRP are supported.";
+      };
+    };
+
+    if (not (await checkCyclesSafeForOutcall())) {
+      let currentBalance = await getCycleBalance();
+      Runtime.trap(
+        "❌ Canister not enough cycles for outcall (threshold: "
+        # outcallThresholdCycles.toText()
+        # " cycles, current balance: "
+        # currentBalance.toText()
+        # " cycles). Contact admin for top up! See `getOutcallCycleStatus()` for details.\n ",
+      );
+    };
+
+    await OutCall.httpGetRequest(url, [], transformRaw);
+  };
+
   public query func transformRaw(input : OutCall.TransformationInput) : async OutCall.TransformationOutput {
     OutCall.transform(input);
   };
 
-  func debugHttpRequest(url : Text) : async Text {
-    let response = await OutCall.httpGetRequest(url, [], transformRaw);
-    Debug.print("DEBUG: Raw HTTP response from URL: " # url # "\n" # response);
-    response;
+  public shared ({ caller }) func debugFetchCoinGecko(symbol : CryptoSymbol) : async Text {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can fetch debug data");
+    };
+
+    switch (buildCoinGeckoUrl(symbol)) {
+      case (null) {
+        "❌ Unsupported symbol: " # symbol # ". Only BTC, ETH, and XRP are supported.";
+      };
+      case (?url) {
+        if (not (await checkCyclesSafeForOutcall())) {
+          let currentBalance = await getCycleBalance();
+          Runtime.trap(
+            "❌ Canister not enough cycles for outcall (threshold: "
+            # outcallThresholdCycles.toText()
+            # " cycles, current balance: "
+            # currentBalance.toText()
+            # " cycles). Contact admin for top up! See `getOutcallCycleStatus()` for details.\n ",
+          );
+        };
+        await OutCall.httpGetRequest(url, [], transformRaw);
+      };
+    };
   };
 };

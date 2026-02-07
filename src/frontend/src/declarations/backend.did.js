@@ -15,6 +15,11 @@ export const UserRole = IDL.Variant({
 });
 export const CryptoSymbol = IDL.Text;
 export const UserProfile = IDL.Record({ 'name' : IDL.Text });
+export const OutcallCycleStatus = IDL.Record({
+  'status' : IDL.Text,
+  'currentBalance' : IDL.Nat,
+  'threshold' : IDL.Nat,
+});
 export const http_header = IDL.Record({
   'value' : IDL.Text,
   'name' : IDL.Text,
@@ -37,10 +42,13 @@ export const TransformationOutput = IDL.Record({
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'checkCyclesSafeForOutcall' : IDL.Func([], [IDL.Bool], []),
   'debugFetchCoinGecko' : IDL.Func([CryptoSymbol], [IDL.Text], []),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+  'getCycleBalance' : IDL.Func([], [IDL.Nat], ['query']),
   'getLiveMarketData' : IDL.Func([CryptoSymbol], [IDL.Text], []),
+  'getOutcallCycleStatus' : IDL.Func([], [OutcallCycleStatus], []),
   'getUserProfile' : IDL.Func(
       [IDL.Principal],
       [IDL.Opt(UserProfile)],
@@ -65,6 +73,11 @@ export const idlFactory = ({ IDL }) => {
   });
   const CryptoSymbol = IDL.Text;
   const UserProfile = IDL.Record({ 'name' : IDL.Text });
+  const OutcallCycleStatus = IDL.Record({
+    'status' : IDL.Text,
+    'currentBalance' : IDL.Nat,
+    'threshold' : IDL.Nat,
+  });
   const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
   const http_request_result = IDL.Record({
     'status' : IDL.Nat,
@@ -84,10 +97,13 @@ export const idlFactory = ({ IDL }) => {
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'checkCyclesSafeForOutcall' : IDL.Func([], [IDL.Bool], []),
     'debugFetchCoinGecko' : IDL.Func([CryptoSymbol], [IDL.Text], []),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
+    'getCycleBalance' : IDL.Func([], [IDL.Nat], ['query']),
     'getLiveMarketData' : IDL.Func([CryptoSymbol], [IDL.Text], []),
+    'getOutcallCycleStatus' : IDL.Func([], [OutcallCycleStatus], []),
     'getUserProfile' : IDL.Func(
         [IDL.Principal],
         [IDL.Opt(UserProfile)],
