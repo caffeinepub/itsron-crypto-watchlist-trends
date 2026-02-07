@@ -1,50 +1,79 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Watchlist Live Price Ticks: replace placeholder with live market tick list and wire into Dashboard",
+  "title": "Fix connection bootstrap stalling after cache clears and improve Watchlist cycle-exhaustion messaging",
   "requirements": [
     {
-      "id": "REQ-26",
-      "summary": "Implement `WatchlistPriceTicks` live list UI that fetches and renders per-symbol live market ticks via the existing React Query hook and CoinGecko parsing/formatting utilities, with robust error handling.",
+      "id": "REQ-28",
+      "summary": "Prevent indefinite “Connecting to backend” by enforcing a bounded connection bootstrap with actionable recovery UI when actor creation cannot complete (e.g., missing canister ID after site data clears).",
       "acceptanceCriteria": [
-        "The `WatchlistPriceTicks` card no longer renders the “Coming Soon” `Alert` by default.",
-        "The component renders a list of one or more crypto symbols with at least: symbol label, formatted current price (USD), and a loading state per row.",
-        "Each row’s live data is fetched via `useGetLiveMarketData(symbol)` and parsed with `parseCoinGeckoResponse()` from `frontend/src/utils/coinGeckoMarketData.ts`.",
-        "If `useGetLiveMarketData` returns an error (including cycle exhaustion errors), the component shows a clear English error message in the card without crashing the page.",
-        "No user-facing text mentions “Demo Mode”."
+        "After clearing site data (cache/cookies/storage) and reloading while authenticated with Internet Identity, the app progresses out of the connecting state without requiring manual developer intervention.",
+        "If the backend actor cannot be created due to missing/invalid configuration (including missing canister ID), the user sees an English error screen (not an infinite spinner) within 45 seconds with actionable buttons (Retry Connection, Re-authenticate, Refresh Page).",
+        "The error screen includes enough diagnostic detail (via the existing ConnectionDetails panel) to confirm whether actor creation was attempted and why it failed.",
+        "Retry actions actually trigger a new actor-creation attempt (not just re-rendering the same idle state)."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/WatchlistPriceTicks.tsx",
+          "path": "frontend/src/components/ConnectionBootstrapper.tsx",
           "operation": "modify",
-          "description": "Replace the placeholder “Coming Soon” UI with a real list-based card that accepts a deterministic `symbols` prop, renders rows, aggregates and displays a clear in-card error message when any row fails (including cycle exhaustion-style messages), and uses existing shadcn-ui building blocks (e.g., Card/Alert) by composing them only (do not modify `frontend/src/components/ui/*`). Verify the component's usage instructions before implementing."
+          "description": "Update the bootstrap UI to time out within 45 seconds even when actorFetching becomes false but actorReady is still false (e.g., stuck 'idle' after cache clears). Ensure the error screen is shown (not a spinner) and includes Retry Connection, Re-authenticate, and Refresh Page actions, while keeping ConnectionDetails visible for diagnostics. Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/components/WatchlistPriceTickRow.tsx",
+          "path": "frontend/src/App.tsx",
+          "operation": "modify",
+          "description": "Wire ConnectionBootstrapper to receive a real actorError and a retry handler that triggers a new actor-creation attempt (not just a re-render). Ensure actorReady is computed from actor availability + error state so the UI cannot remain indefinitely in a connecting view. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/utils/connectionErrors.ts",
           "operation": "create",
-          "description": "Create a child row component used by `WatchlistPriceTicks` so each row can safely call `useGetLiveMarketData(symbol)` (avoiding hooks-in-loops). The row should parse responses with `parseCoinGeckoResponse()` and format prices with `formatPrice()` from `frontend/src/utils/coinGeckoMarketData.ts`, and provide a per-row loading indicator/state. Verify the component's usage instructions before implementing."
+          "description": "Add shared frontend helpers to normalize actor-creation/configuration failures into meaningful English Error messages (including missing/invalid canister ID scenarios) for display in ConnectionBootstrapper and ConnectionDetails. Verify the component's usage instructions before implementing."
         }
       ]
     },
     {
-      "id": "REQ-27",
-      "summary": "Wire `WatchlistPriceTicks` into the Dashboard with an explicit supported symbol list and accurate English card copy that does not imply a backend-backed personal watchlist.",
+      "id": "REQ-29",
+      "summary": "Harden actor initialization hooks to reliably surface actor-creation failures as Errors, transition diagnostics to 'error', and propagate failures to ConnectionBootstrapper / ConnectionDetails.",
       "acceptanceCriteria": [
-        "`frontend/src/pages/Dashboard.tsx` passes an explicit list of symbols into `WatchlistPriceTicks` (e.g., a subset of supported symbols such as BTC/ETH/XRP) rather than relying on an unimplemented backend watchlist.",
-        "If the UI is not using a real backend watchlist yet, the card copy clearly states what is being shown (English) without implying the user’s personal watchlist is being loaded from the backend.",
-        "The component only queries supported symbols (BTC/ETH/XRP) to avoid deterministic “Unsupported symbol” responses in the live ticks list.",
-        "The Dashboard renders without TypeScript errors after the prop/wiring change."
+        "When actor creation fails, the failure is exposed as a real Error (with a meaningful English message) that is shown by ConnectionBootstrapper.",
+        "The diagnostics stage reported by useActorEnhanced transitions to 'error' when actor creation fails, rather than remaining 'idle' indefinitely.",
+        "There is no state where the user is authenticated, but the app remains in a non-progressing 'idle' connection stage without either creating an actor or showing an error."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/pages/Dashboard.tsx",
+          "path": "frontend/src/hooks/useActor.ts",
           "operation": "modify",
-          "description": "Pass a deterministic supported symbol array (BTC/ETH/XRP only) into `WatchlistPriceTicks` via props; update any surrounding copy or structure as needed so the UI does not imply a backend-loaded personal watchlist is being displayed. Verify the component's usage instructions before implementing."
+          "description": "Extend the hook to expose actor creation failures (react-query error) and a retry/refetch mechanism that forces a new createActorWithConfig attempt. Ensure errors from core-infrastructure actor/config creation (including missing canister ID/misconfiguration) are caught and surfaced as meaningful English Errors instead of silent idle/loading. Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/components/WatchlistPriceTicks.tsx",
+          "path": "frontend/src/hooks/useActorEnhanced.ts",
           "operation": "modify",
-          "description": "Update the card header/subtitle text to be accurate in English for a deterministic symbol list (not a backend watchlist), and ensure prop types align with the new Dashboard wiring. Verify the component's usage instructions before implementing."
+          "description": "Propagate errors from useActor into the enhanced state, ensuring diagnostics.stage becomes 'error' on failure and never remains 'idle' while authenticated without progress. Update retry() to invoke the underlying actor re-creation attempt (and only re-authenticate when appropriate), and include diagnostics details that confirm actor creation was attempted and why it failed. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/ConnectionDetails.tsx",
+          "operation": "modify",
+          "description": "Ensure the diagnostics panel can display improved normalized error details (from the shared connection error helper) and clearly reflects the 'error' stage when actor creation fails. Verify the component's usage instructions before implementing."
+        }
+      ]
+    },
+    {
+      "id": "REQ-30",
+      "summary": "Make Watchlist tick-row cycle-exhaustion errors user-understandable and consistent with the dashboard cycle error handling.",
+      "acceptanceCriteria": [
+        "In frontend/src/components/WatchlistPriceTickRow.tsx, cycle-exhaustion errors no longer display the generic 'Service unavailable' text; instead they display an English message that explicitly mentions the backend being out of cycles and that live data is temporarily unavailable until cycles are topped up.",
+        "Non-cycle errors continue to show a non-misleading generic error state (e.g., 'Error loading'), distinct from the cycle-specific message.",
+        "The tick rows still render successfully for symbols whose requests succeed, and failure messaging is isolated per row (one failing symbol does not break the whole list)."
+      ],
+      "file_operations": [
+        {
+          "path": "frontend/src/components/WatchlistPriceTickRow.tsx",
+          "operation": "modify",
+          "description": "Replace the cycle error label with a concise English message aligned with CryptoCard (e.g., indicate the backend canister is out of cycles and live data is temporarily unavailable until cycles are topped up). Keep non-cycle errors as a distinct generic message and ensure error handling remains isolated per row. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/utils/connectionErrors.ts",
+          "operation": "modify",
+          "description": "Add/extend a shared detector for IC cycle-exhaustion failures (e.g., 'out of cycles', IC0504/IC0406 or equivalent) so WatchlistPriceTickRow and other UI areas can use consistent classification and messaging. Verify the component's usage instructions before implementing."
         }
       ]
     }

@@ -18,6 +18,8 @@ interface ConnectionBootstrapperProps {
         adminInitAttempted: boolean;
         adminInitSucceeded: boolean;
         stage: 'idle' | 'creating-actor' | 'initializing-admin' | 'ready' | 'error';
+        actorCreationAttempted?: boolean;
+        actorCreationFailed?: boolean;
     };
     children?: React.ReactNode;
 }
@@ -37,37 +39,49 @@ export default function ConnectionBootstrapper({
     const { clear, login } = useInternetIdentity();
     const [timeoutReached, setTimeoutReached] = useState(false);
     const [elapsedSeconds, setElapsedSeconds] = useState(0);
+    const [connectionStartTime, setConnectionStartTime] = useState<number | null>(null);
 
-    // Reset timeout when connection state changes
+    // Start tracking time when authenticated but not ready
     useEffect(() => {
-        setTimeoutReached(false);
-        setElapsedSeconds(0);
-    }, [actorFetching, actorError, actorReady]);
+        if (isAuthenticated && !actorReady && !actorError) {
+            if (!connectionStartTime) {
+                setConnectionStartTime(Date.now());
+            }
+        } else {
+            setConnectionStartTime(null);
+            setTimeoutReached(false);
+            setElapsedSeconds(0);
+        }
+    }, [isAuthenticated, actorReady, actorError, connectionStartTime]);
 
-    // Track elapsed time and trigger timeout
+    // Track elapsed time and trigger timeout even when actorFetching becomes false
     useEffect(() => {
-        if (!actorFetching || actorReady || actorError) {
+        if (!connectionStartTime || actorReady || actorError) {
             return;
         }
 
-        const startTime = Date.now();
         const interval = setInterval(() => {
-            const elapsed = Date.now() - startTime;
+            const elapsed = Date.now() - connectionStartTime;
             setElapsedSeconds(Math.floor(elapsed / 1000));
 
-            if (elapsed >= CONNECTION_TIMEOUT_MS) {
+            // Trigger timeout if we've been waiting too long, regardless of actorFetching state
+            if (elapsed >= CONNECTION_TIMEOUT_MS && !actorReady && !actorError) {
                 setTimeoutReached(true);
+                console.error('⏱️ Connection timeout: Actor not ready after 45 seconds');
                 clearInterval(interval);
             }
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [actorFetching, actorReady, actorError]);
+    }, [connectionStartTime, actorReady, actorError]);
 
     // Handle re-authentication
     const handleReAuthenticate = async () => {
         try {
             console.log('🔄 Re-authenticating...');
+            setTimeoutReached(false);
+            setElapsedSeconds(0);
+            setConnectionStartTime(null);
             await clear();
             setTimeout(() => {
                 login();
@@ -82,13 +96,23 @@ export default function ConnectionBootstrapper({
         window.location.reload();
     };
 
+    // Handle retry
+    const handleRetry = () => {
+        setTimeoutReached(false);
+        setElapsedSeconds(0);
+        setConnectionStartTime(null);
+        onRetry();
+    };
+
     // Show error state if there's an explicit error OR timeout reached
-    const showError = actorError || timeoutReached;
+    const showError = actorError || timeoutReached || diagnostics.stage === 'error';
 
     if (showError) {
         const errorMessage = actorError
             ? actorError.message
-            : 'Connection timeout: Backend initialization took too long';
+            : timeoutReached
+            ? 'Connection timeout: Backend actor could not be created within 45 seconds. This may occur after clearing site data.'
+            : 'Failed to establish connection to backend';
 
         return (
             <div className="flex min-h-screen items-center justify-center bg-background">
@@ -107,7 +131,7 @@ export default function ConnectionBootstrapper({
                     </div>
 
                     <div className="flex flex-wrap gap-3 justify-center">
-                        <Button onClick={onRetry} variant="default" size="lg">
+                        <Button onClick={handleRetry} variant="default" size="lg">
                             Retry Connection
                         </Button>
                         <Button onClick={handleReAuthenticate} variant="outline" size="lg">
@@ -132,8 +156,8 @@ export default function ConnectionBootstrapper({
         );
     }
 
-    // Show loading state
-    if (actorFetching || !actorReady || isAdminLoading) {
+    // Show loading state while connecting
+    if (!actorReady || isAdminLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-6 max-w-2xl px-4">

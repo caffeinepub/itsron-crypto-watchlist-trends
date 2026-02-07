@@ -3,6 +3,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Copy, Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
+import { normalizeActorError } from '../utils/connectionErrors';
 
 interface ConnectionDetailsProps {
     isAuthenticated: boolean;
@@ -17,6 +18,8 @@ interface ConnectionDetailsProps {
         adminInitAttempted: boolean;
         adminInitSucceeded: boolean;
         stage: 'idle' | 'creating-actor' | 'initializing-admin' | 'ready' | 'error';
+        actorCreationAttempted?: boolean;
+        actorCreationFailed?: boolean;
     };
     elapsedSeconds: number;
 }
@@ -33,6 +36,8 @@ export default function ConnectionDetails({
     const [isExpanded, setIsExpanded] = useState(false);
     const [copied, setCopied] = useState(false);
 
+    const normalizedErrorMessage = error ? normalizeActorError(error) : null;
+
     const handleCopy = () => {
         const summary = `
 Connection Details:
@@ -44,9 +49,12 @@ Connection Details:
 - Admin Loading: ${isAdminLoading}
 - Admin Init Attempted: ${diagnostics.adminInitAttempted}
 - Admin Init Succeeded: ${diagnostics.adminInitSucceeded}
+- Actor Creation Attempted: ${diagnostics.actorCreationAttempted ?? 'N/A'}
+- Actor Creation Failed: ${diagnostics.actorCreationFailed ?? 'N/A'}
 - Stage: ${diagnostics.stage}
 - Elapsed Time: ${elapsedSeconds}s
 - Error: ${error ? error.message : 'None'}
+- Normalized Error: ${normalizedErrorMessage || 'None'}
         `.trim();
 
         navigator.clipboard.writeText(summary);
@@ -88,12 +96,24 @@ Connection Details:
                         <DetailRow label="Admin Loading" value={isAdminLoading} />
                         <DetailRow label="Admin Init Attempted" value={diagnostics.adminInitAttempted} />
                         <DetailRow label="Admin Init Succeeded" value={diagnostics.adminInitSucceeded} />
+                        {diagnostics.actorCreationAttempted !== undefined && (
+                            <DetailRow label="Actor Creation Attempted" value={diagnostics.actorCreationAttempted} />
+                        )}
+                        {diagnostics.actorCreationFailed !== undefined && (
+                            <DetailRow label="Actor Creation Failed" value={diagnostics.actorCreationFailed} />
+                        )}
                         <DetailRow label="Stage" value={diagnostics.stage} />
                         <DetailRow label="Elapsed Time" value={`${elapsedSeconds}s`} />
                         {error && (
                             <div className="pt-2 border-t border-muted">
                                 <p className="font-medium text-destructive mb-1">Error:</p>
-                                <p className="text-muted-foreground break-words">{error.message}</p>
+                                <p className="text-muted-foreground break-words mb-2">{error.message}</p>
+                                {normalizedErrorMessage && normalizedErrorMessage !== error.message && (
+                                    <>
+                                        <p className="font-medium text-muted-foreground mb-1">User-friendly message:</p>
+                                        <p className="text-foreground break-words">{normalizedErrorMessage}</p>
+                                    </>
+                                )}
                             </div>
                         )}
                     </div>

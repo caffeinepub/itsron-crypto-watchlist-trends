@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 19,
+  "projectStateVersion": 21,
   "summary": "Project now includes ensuring production reliability of CoinGecko HTTP outcalls by preventing backend canister cycle exhaustion (auto top-ups/monitoring) in addition to live-mode go-live prep and in-app debug/testing.",
   "architectural_notes": [
     "Frontend depends on a cached backend canister ID (e.g., in localStorage); actor creation can stall if the cached ID is missing/wiped and auto-discovery does not run.",
@@ -126,6 +126,30 @@
       "title": "Wire `WatchlistPriceTicks` into the Dashboard so it receives a deterministic symbol list to display (until backend watchlist endpoints exist), and ensure the card header/subtitle remain accurate and non-misleading in English.",
       "reqIds": [
         "REQ-27"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-fix-the-frontend-backend-connection-bootstrap-flow-so-the-app-cannot-remain-indefinitely-stuck-on-connecting-to-backend-after-browser-cache-cookies-storage-are-cleared-and-the-cached-backend-canister-id-is-missing-the-app-must-either-a-successfully-re-discover-recreate-the-backend-actor-or-b-surface-a-clear-actionable-error-state-with-recovery-actions",
+      "title": "Fix the frontend backend-connection bootstrap flow so the app cannot remain indefinitely stuck on “Connecting to backend” after browser cache/cookies/storage are cleared and the cached backend canister ID is missing; the app must either (a) successfully re-discover/recreate the backend actor, or (b) surface a clear actionable error state with recovery actions.",
+      "reqIds": [
+        "REQ-28"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-harden-the-actor-initialization-hook-so-it-reliably-reports-errors-when-actor-creation-fails-including-missing-canister-id-misconfiguration-instead-of-silently-staying-in-an-idle-loading-state-and-ensure-the-error-is-propagated-to-the-existing-connection-ui-connectionbootstrapper-connectiondetails",
+      "title": "Harden the actor initialization hook so it reliably reports errors when actor creation fails (including missing canister ID / misconfiguration) instead of silently staying in an idle/loading state, and ensure the error is propagated to the existing connection UI (ConnectionBootstrapper / ConnectionDetails).",
+      "reqIds": [
+        "REQ-29"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-improve-watchlist-live-price-tick-row-error-messaging-for-cycle-exhaustion-failures-so-it-is-user-understandable-and-consistent-with-the-dashboard-s-cycle-error-handling-when-the-live-market-data-request-fails-with-an-ic-rejection-containing-out-of-cycles-ic0504-or-equivalent-show-a-concise-english-message-indicating-the-backend-is-out-of-cycles-and-live-data-is-temporarily-unavailable-until-cycles-are-topped-up",
+      "title": "Improve Watchlist live price tick row error messaging for cycle-exhaustion failures so it is user-understandable and consistent with the dashboard’s cycle error handling: when the live market data request fails with an IC rejection containing 'out of cycles' / IC0504 (or equivalent), show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
+      "reqIds": [
+        "REQ-30"
       ],
       "version": 1
     }

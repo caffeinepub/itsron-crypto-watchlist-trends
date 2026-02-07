@@ -1,61 +1,73 @@
 {
   "kind": "build_request",
-  "title": "Fix Watchlist Live Price Ticks to show live market data instead of “Coming Soon”",
+  "title": "Fix backend connection stalling after cache clears and improve Watchlist live tick error messaging",
   "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-26",
-      "text": "Replace the hard-coded “Coming Soon” placeholder in `frontend/src/components/WatchlistPriceTicks.tsx` with a live list UI that fetches and displays live market data ticks using the existing `useGetLiveMarketData(symbol)` React Query hook and the existing CoinGecko parsing/formatting utilities.",
+      "id": "REQ-28",
+      "text": "Fix the frontend backend-connection bootstrap flow so the app cannot remain indefinitely stuck on “Connecting to backend” after browser cache/cookies/storage are cleared and the cached backend canister ID is missing; the app must either (a) successfully re-discover/recreate the backend actor, or (b) surface a clear actionable error state with recovery actions.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "recent-7",
-          "recent-9"
+          "msg-4"
         ],
         "quotes": [
-          "Fix Live Price Ticks",
-          "The screenshot shows the component is still hard‑coded to always show “Coming Soon.” There is no live price tick implementation and no wiring to your real watchlist data."
+          "can I get this fixed as well"
         ]
       },
       "acceptanceCriteria": [
-        "The `WatchlistPriceTicks` card no longer renders the “Coming Soon” `Alert` by default.",
-        "The component renders a list of one or more crypto symbols with at least: symbol label, formatted current price (USD), and a loading state per row.",
-        "Each row’s live data is fetched via `useGetLiveMarketData(symbol)` and parsed with `parseCoinGeckoResponse()` from `frontend/src/utils/coinGeckoMarketData.ts`.",
-        "If `useGetLiveMarketData` returns an error (including cycle exhaustion errors), the component shows a clear English error message in the card without crashing the page.",
-        "No user-facing text mentions “Demo Mode”."
+        "After clearing site data (cache/cookies/storage) and reloading while authenticated with Internet Identity, the app progresses out of the connecting state without requiring manual developer intervention.",
+        "If the backend actor cannot be created due to missing/invalid configuration (including missing canister ID), the user sees an English error screen (not an infinite spinner) within 45 seconds with actionable buttons (Retry Connection, Re-authenticate, Refresh Page).",
+        "The error screen includes enough diagnostic detail (via the existing ConnectionDetails panel) to confirm whether actor creation was attempted and why it failed.",
+        "Retry actions actually trigger a new actor-creation attempt (not just re-rendering the same idle state)."
       ]
     },
     {
-      "id": "REQ-27",
-      "text": "Wire `WatchlistPriceTicks` into the Dashboard so it receives a deterministic symbol list to display (until backend watchlist endpoints exist), and ensure the card header/subtitle remain accurate and non-misleading in English.",
+      "id": "REQ-29",
+      "text": "Harden the actor initialization hook so it reliably reports errors when actor creation fails (including missing canister ID / misconfiguration) instead of silently staying in an idle/loading state, and ensure the error is propagated to the existing connection UI (ConnectionBootstrapper / ConnectionDetails).",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "recent-7",
-          "recent-9"
+          "msg-4"
         ],
         "quotes": [
-          "Fix Live Price Ticks",
-          "fetches your actual watchlist from the backend • runs `useGetLiveMarketData()` for each symbol • displays price updates in the card instead of the placeholder message"
+          "can I get this fixed as well"
         ]
       },
       "acceptanceCriteria": [
-        "`frontend/src/pages/Dashboard.tsx` passes an explicit list of symbols into `WatchlistPriceTicks` (e.g., a subset of supported symbols such as BTC/ETH/XRP) rather than relying on an unimplemented backend watchlist.",
-        "If the UI is not using a real backend watchlist yet, the card copy clearly states what is being shown (English) without implying the user’s personal watchlist is being loaded from the backend.",
-        "The component only queries supported symbols (BTC/ETH/XRP) to avoid deterministic “Unsupported symbol” responses in the live ticks list.",
-        "The Dashboard renders without TypeScript errors after the prop/wiring change."
+        "When actor creation fails, the failure is exposed as a real Error (with a meaningful English message) that is shown by ConnectionBootstrapper.",
+        "The diagnostics stage reported by useActorEnhanced transitions to 'error' when actor creation fails, rather than remaining 'idle' indefinitely.",
+        "There is no state where the user is authenticated, but the app remains in a non-progressing 'idle' connection stage without either creating an actor or showing an error."
+      ]
+    },
+    {
+      "id": "REQ-30",
+      "text": "Improve Watchlist live price tick row error messaging for cycle-exhaustion failures so it is user-understandable and consistent with the dashboard’s cycle error handling: when the live market data request fails with an IC rejection containing 'out of cycles' / IC0504 (or equivalent), show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
+      "target": "frontend",
+      "source": {
+        "messageIds": [
+          "msg-4"
+        ],
+        "quotes": [
+          "can I get this fixed as well"
+        ]
+      },
+      "acceptanceCriteria": [
+        "In frontend/src/components/WatchlistPriceTickRow.tsx, cycle-exhaustion errors no longer display the generic 'Service unavailable' text; instead they display an English message that explicitly mentions the backend being out of cycles and that live data is temporarily unavailable until cycles are topped up.",
+        "Non-cycle errors continue to show a non-misleading generic error state (e.g., 'Error loading'), distinct from the cycle-specific message.",
+        "The tick rows still render successfully for symbols whose requests succeed, and failure messaging is isolated per row (one failing symbol does not break the whole list)."
       ]
     }
   ],
   "constraints": [
-    "Do not modify files under `frontend/src/components/ui` (compose existing shadcn components instead).",
-    "Do not edit immutable paths: `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, and anything under `frontend/src/components/ui`.",
-    "Keep backend architecture single-actor; no new backend services or databases."
+    "Do not edit any files under frontend/src/components/ui (Shadcn UI components are read-only).",
+    "Do not edit any paths listed in SYSTEM_CONTEXT.frontend.immutablePaths (compose around them instead).",
+    "Backend must remain single-actor; do not introduce additional canisters or external databases/services."
   ],
   "nonGoals": [
-    "Implementing backend watchlist storage/endpoints (add/remove/list watchlist) in Motoko.",
-    "Adding real-time streaming (WebSockets/push) for ticks; polling via React Query is sufficient.",
-    "Changing CoinGecko backend outcall behavior beyond what’s needed for the UI to display existing live responses."
+    "Implementing backend watchlist CRUD endpoints (add/remove/list) is out of scope for this fix.",
+    "Adding new authentication providers beyond Internet Identity is out of scope.",
+    "Changing CoinGecko data parsing/formatting logic is out of scope unless required to display the improved error message."
   ],
   "imageRequirements": {
     "required": [],

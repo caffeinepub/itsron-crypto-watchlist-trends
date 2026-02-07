@@ -27,32 +27,28 @@ const queryClient = new QueryClient({
 
 function AppContent() {
   const { identity, loginStatus, isInitializing, isLoginError, clear, login } = useInternetIdentity();
-  const { actor, isFetching: actorFetching, isError: actorError, error: actorErrorMessage, retry: retryActor, diagnostics } = useActorEnhanced();
+  const { 
+    actor, 
+    isFetching: actorFetching, 
+    isError: actorIsError, 
+    error: actorErrorMessage, 
+    retry: retryActor, 
+    diagnostics 
+  } = useActorEnhanced();
   const [currentView, setCurrentView] = useState<'dashboard' | 'backend-tester' | 'pending'>('pending');
 
   // CRITICAL: Check if identity is ready AND non-anonymous
   // Only after initialization completes can we determine if user is truly authenticated
   const isAuthenticated = !isInitializing && identity && !identity.getPrincipal().isAnonymous();
 
+  // Compute actorReady: actor exists AND no error state
+  const actorReady = !!actor && !actorIsError;
+
   // Query user profile - only enabled after initialization completes
   const { data: userProfile, isLoading: profileLoading, isFetched: profileFetched } = useGetCallerUserProfile();
 
   // Determine if we should show profile setup
   const showProfileSetup = Boolean(isAuthenticated && !profileLoading && profileFetched && userProfile === null);
-
-  // Handle manual retry with re-authentication
-  const handleRetry = async () => {
-    try {
-      console.log('🔄 User initiated retry...');
-      await clear();
-      setTimeout(() => {
-        login();
-      }, 500);
-    } catch (error) {
-      console.error('❌ Retry failed:', error);
-      window.location.reload();
-    }
-  };
 
   // Navigation handler for Backend Tester - now allows all authenticated users
   const handleNavigateToTester = () => {
@@ -68,7 +64,7 @@ function AppContent() {
 
   // Post-login routing - allow backend-tester for all authenticated users
   useEffect(() => {
-    if (isAuthenticated && actor && !actorFetching && currentView === 'pending') {
+    if (isAuthenticated && actorReady && currentView === 'pending') {
       const path = window.location.pathname;
       
       if (path === '/backend-tester') {
@@ -77,7 +73,7 @@ function AppContent() {
         setCurrentView('dashboard');
       }
     }
-  }, [isAuthenticated, actor, actorFetching, currentView]);
+  }, [isAuthenticated, actorReady, currentView]);
 
   // Handle browser back/forward navigation
   useEffect(() => {
@@ -140,7 +136,10 @@ function AppContent() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button onClick={handleRetry} variant="default">
+            <Button onClick={async () => {
+              await clear();
+              setTimeout(() => login(), 500);
+            }} variant="default">
               Retry
             </Button>
             <Button onClick={() => window.location.reload()} variant="outline">
@@ -160,7 +159,7 @@ function AppContent() {
         isAuthenticated={isAuthenticated}
         actorFetching={actorFetching}
         actorError={actorErrorMessage}
-        actorReady={!!actor && !actorFetching && !actorError}
+        actorReady={actorReady}
         isAdminLoading={false}
         onRetry={retryActor}
         diagnostics={diagnostics}

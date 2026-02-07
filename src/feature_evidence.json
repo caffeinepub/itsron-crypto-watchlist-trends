@@ -2,11 +2,12 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-replace-the-hard-coded-coming-soon-placeholder-in-frontend-src-components-watchlistpriceticks-tsx-with-a-live-list-ui-that-fetches-and-displays-live-market-data-ticks-using-the-existing-usegetlivemarketdata-symbol-react-query-hook-and-the-existing-coingecko-parsing-formatting-utilities",
-      "featureTitle": "Replace the hard-coded “Coming Soon” placeholder in `frontend/src/components/WatchlistPriceTicks.tsx` with a live list UI that fetches and displays live market data ticks using the existing `useGetLiveMarketData(symbol)` React Query hook and the existing CoinGecko parsing/formatting utilities.",
+      "featureId": "feature-fix-the-frontend-backend-connection-bootstrap-flow-so-the-app-cannot-remain-indefinitely-stuck-on-connecting-to-backend-after-browser-cache-cookies-storage-are-cleared-and-the-cached-backend-canister-id-is-missing-the-app-must-either-a-successfully-re-discover-recreate-the-backend-actor-or-b-surface-a-clear-actionable-error-state-with-recovery-actions",
+      "featureTitle": "Fix the frontend backend-connection bootstrap flow so the app cannot remain indefinitely stuck on “Connecting to backend” after browser cache/cookies/storage are cleared and the cached backend canister ID is missing; the app must either (a) successfully re-discover/recreate the backend actor, or (b) surface a clear actionable error state with recovery actions.",
       "files": [
-        "frontend/src/components/WatchlistPriceTickRow.tsx",
-        "frontend/src/components/WatchlistPriceTicks.tsx"
+        "frontend/src/App.tsx",
+        "frontend/src/components/ConnectionBootstrapper.tsx",
+        "frontend/src/utils/connectionErrors.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -18,16 +19,16 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-26"
+        "REQ-28"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-wire-watchlistpriceticks-into-the-dashboard-so-it-receives-a-deterministic-symbol-list-to-display-until-backend-watchlist-endpoints-exist-and-ensure-the-card-header-subtitle-remain-accurate-and-non-misleading-in-english",
-      "featureTitle": "Wire `WatchlistPriceTicks` into the Dashboard so it receives a deterministic symbol list to display (until backend watchlist endpoints exist), and ensure the card header/subtitle remain accurate and non-misleading in English.",
+      "featureId": "feature-harden-the-actor-initialization-hook-so-it-reliably-reports-errors-when-actor-creation-fails-including-missing-canister-id-misconfiguration-instead-of-silently-staying-in-an-idle-loading-state-and-ensure-the-error-is-propagated-to-the-existing-connection-ui-connectionbootstrapper-connectiondetails",
+      "featureTitle": "Harden the actor initialization hook so it reliably reports errors when actor creation fails (including missing canister ID / misconfiguration) instead of silently staying in an idle/loading state, and ensure the error is propagated to the existing connection UI (ConnectionBootstrapper / ConnectionDetails).",
       "files": [
-        "frontend/src/components/WatchlistPriceTicks.tsx",
-        "frontend/src/pages/Dashboard.tsx"
+        "frontend/src/components/ConnectionDetails.tsx",
+        "frontend/src/hooks/useActorEnhanced.ts"
       ],
       "components": [
         "authorization@4.0.0",
@@ -39,7 +40,28 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-27"
+        "REQ-29"
+      ],
+      "confidence": "high"
+    },
+    {
+      "featureId": "feature-improve-watchlist-live-price-tick-row-error-messaging-for-cycle-exhaustion-failures-so-it-is-user-understandable-and-consistent-with-the-dashboard-s-cycle-error-handling-when-the-live-market-data-request-fails-with-an-ic-rejection-containing-out-of-cycles-ic0504-or-equivalent-show-a-concise-english-message-indicating-the-backend-is-out-of-cycles-and-live-data-is-temporarily-unavailable-until-cycles-are-topped-up",
+      "featureTitle": "Improve Watchlist live price tick row error messaging for cycle-exhaustion failures so it is user-understandable and consistent with the dashboard’s cycle error handling: when the live market data request fails with an IC rejection containing 'out of cycles' / IC0504 (or equivalent), show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
+      "files": [
+        "frontend/src/components/WatchlistPriceTickRow.tsx",
+        "frontend/src/utils/connectionErrors.ts"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "http-outcalls@3.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-30"
       ],
       "confidence": "high"
     }

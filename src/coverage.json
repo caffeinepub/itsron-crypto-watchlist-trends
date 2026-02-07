@@ -1,39 +1,55 @@
 {
   "kind": "coverage_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T20:10:17.867Z",
+  "generatedAt": "2026-02-07T20:19:23.756Z",
   "sources": {
     "buildRequest": true,
     "implementationPlan": true
   },
   "requirements": {
-    "total": 2,
-    "implemented": 2,
+    "total": 3,
+    "implemented": 3,
     "items": [
       {
-        "id": "REQ-26",
-        "summary": "Replace the hard-coded “Coming Soon” placeholder in `frontend/src/components/WatchlistPriceTicks.tsx` with a live list UI that fetches and displays live market data ticks using the existing `useGetLiveMarketData(symbol)` React Query hook and the existing CoinGecko parsing/formatting utilities.",
+        "id": "REQ-28",
+        "summary": "Fix the frontend backend-connection bootstrap flow so the app cannot remain indefinitely stuck on “Connecting to backend” after browser cache/cookies/storage are cleared and the cached backend canister ID is missing; the app must either (a) successfully re-discover/recreate the backend actor, or (b) surface a clear actionable error state with recovery actions.",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/components/WatchlistPriceTicks.tsx",
-          "frontend/src/components/WatchlistPriceTickRow.tsx"
+          "frontend/src/components/ConnectionBootstrapper.tsx",
+          "frontend/src/App.tsx",
+          "frontend/src/utils/connectionErrors.ts"
         ],
         "matchedFiles": [
-          "frontend/src/components/WatchlistPriceTicks.tsx",
-          "frontend/src/components/WatchlistPriceTickRow.tsx"
+          "frontend/src/components/ConnectionBootstrapper.tsx",
+          "frontend/src/App.tsx",
+          "frontend/src/utils/connectionErrors.ts"
         ]
       },
       {
-        "id": "REQ-27",
-        "summary": "Wire `WatchlistPriceTicks` into the Dashboard so it receives a deterministic symbol list to display (until backend watchlist endpoints exist), and ensure the card header/subtitle remain accurate and non-misleading in English.",
+        "id": "REQ-29",
+        "summary": "Harden the actor initialization hook so it reliably reports errors when actor creation fails (including missing canister ID / misconfiguration) instead of silently staying in an idle/loading state, and ensure the error is propagated to the existing connection UI (ConnectionBootstrapper / ConnectionDetails).",
         "status": "implemented",
         "plannedFiles": [
-          "frontend/src/pages/Dashboard.tsx",
-          "frontend/src/components/WatchlistPriceTicks.tsx"
+          "frontend/src/hooks/useActor.ts",
+          "frontend/src/hooks/useActorEnhanced.ts",
+          "frontend/src/components/ConnectionDetails.tsx"
         ],
         "matchedFiles": [
-          "frontend/src/pages/Dashboard.tsx",
-          "frontend/src/components/WatchlistPriceTicks.tsx"
+          "frontend/src/hooks/useActorEnhanced.ts",
+          "frontend/src/components/ConnectionDetails.tsx"
+        ]
+      },
+      {
+        "id": "REQ-30",
+        "summary": "Improve Watchlist live price tick row error messaging for cycle-exhaustion failures so it is user-understandable and consistent with the dashboard’s cycle error handling: when the live market data request fails with an IC rejection containing 'out of cycles' / IC0504 (or equivalent), show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
+        "status": "implemented",
+        "plannedFiles": [
+          "frontend/src/components/WatchlistPriceTickRow.tsx",
+          "frontend/src/utils/connectionErrors.ts"
+        ],
+        "matchedFiles": [
+          "frontend/src/components/WatchlistPriceTickRow.tsx",
+          "frontend/src/utils/connectionErrors.ts"
         ]
       }
     ]
@@ -43,9 +59,12 @@
     "feature_evidence.json",
     "frontend-file-summaries.txt",
     "frontend-implementation-plan.json",
+    "frontend/src/App.tsx",
+    "frontend/src/components/ConnectionBootstrapper.tsx",
+    "frontend/src/components/ConnectionDetails.tsx",
     "frontend/src/components/WatchlistPriceTickRow.tsx",
-    "frontend/src/components/WatchlistPriceTicks.tsx",
-    "frontend/src/pages/Dashboard.tsx",
+    "frontend/src/hooks/useActorEnhanced.ts",
+    "frontend/src/utils/connectionErrors.ts",
     "project_state.json",
     "scratch/component-selection.json",
     "spec.md",

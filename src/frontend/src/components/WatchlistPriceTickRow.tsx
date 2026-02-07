@@ -1,5 +1,6 @@
 import { useGetLiveMarketData } from '@/hooks/useQueries';
 import { parseCoinGeckoResponse, formatPrice } from '@/utils/coinGeckoMarketData';
+import { isCycleExhaustionError, getCycleExhaustionMessage, getGenericErrorMessage } from '@/utils/connectionErrors';
 import { Loader2, TrendingUp, TrendingDown } from 'lucide-react';
 import type { CryptoSymbol } from '../backend';
 
@@ -14,10 +15,8 @@ export default function WatchlistPriceTickRow({ symbol }: WatchlistPriceTickRowP
   const parsed = data ? parseCoinGeckoResponse(data) : null;
 
   // Determine if this is a cycle exhaustion error
-  const isCycleError = error?.message?.toLowerCase().includes('cycles') ||
-                       error?.message?.includes('IC0406') ||
-                       error?.message?.includes('IC0504') ||
-                       parsed?.error?.toLowerCase().includes('cycles');
+  const isCycleError = isCycleExhaustionError(error) || 
+                       (parsed?.error && isCycleExhaustionError(parsed.error));
 
   return (
     <div className="flex items-center justify-between py-3 border-b border-border/50 last:border-0">
@@ -42,8 +41,8 @@ export default function WatchlistPriceTickRow({ symbol }: WatchlistPriceTickRowP
             <span className="text-sm">Loading...</span>
           </div>
         ) : error || !parsed?.success ? (
-          <div className="text-xs text-destructive">
-            {isCycleError ? 'Service unavailable' : 'Error loading'}
+          <div className="text-xs text-destructive max-w-[200px] text-right">
+            {isCycleError ? getCycleExhaustionMessage() : getGenericErrorMessage()}
           </div>
         ) : parsed.data ? (
           <div className="space-y-1">
