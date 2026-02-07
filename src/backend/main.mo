@@ -5,11 +5,11 @@ import AccessControl "authorization/access-control";
 import OutCall "http-outcalls/outcall";
 import MixinAuthorization "authorization/MixinAuthorization";
 import Text "mo:core/Text";
-import Migration "migration";
+
 import Nat "mo:core/Nat";
 import Cycles "mo:core/Cycles";
 
-(with migration = Migration.run)
+
 actor {
   let accessControlState = AccessControl.initState();
   include MixinAuthorization(accessControlState);
@@ -22,7 +22,6 @@ actor {
 
   let userProfiles = Map.empty<Principal, UserProfile>();
 
-  // Cycle threshold for safe outcalls (currently set to 100B)
   var outcallThresholdCycles : Nat = 100_000_000_000;
 
   public type OutcallCycleStatus = {
@@ -31,18 +30,25 @@ actor {
     status : Text;
   };
 
-  // Get current cycle balance in Nats
   public query ({ caller }) func getCycleBalance() : async Nat {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can view cycle balance");
+    };
     Cycles.balance();
   };
 
-  // Check if cycle balance is above threshold
   public shared ({ caller }) func checkCyclesSafeForOutcall() : async Bool {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can check cycle status");
+    };
     Cycles.balance() > outcallThresholdCycles;
   };
 
-  // Get detailed outcall cycle status
   public shared ({ caller }) func getOutcallCycleStatus() : async OutcallCycleStatus {
+    if (not AccessControl.isAdmin(accessControlState, caller)) {
+      Runtime.trap("Unauthorized: Only admins can view outcall cycle status");
+    };
+    
     let balance = Cycles.balance();
 
     let status = if (balance > outcallThresholdCycles) {
@@ -94,6 +100,27 @@ actor {
     };
   };
 
+  func buildCoinGeckoHistoricalUrl(symbol : CryptoSymbol, days : Nat) : ?Text {
+    func baseUrl(id : Text) : Text {
+      "https://api.coingecko.com/api/v3/coins/" # id # "/market_chart?vs_currency=usd&days=" # days.toText() # "&interval=daily";
+    };
+
+    switch (symbol) {
+      case ("BTC") { ?baseUrl("bitcoin") };
+      case ("ETH") { ?baseUrl("ethereum") };
+      case ("XRP") { ?baseUrl("ripple") };
+      case (_) { null };
+    };
+  };
+
+  func internalCheckCyclesSafeForOutcall() : Bool {
+    Cycles.balance() > outcallThresholdCycles;
+  };
+
+  func internalGetCycleBalance() : Nat {
+    Cycles.balance();
+  };
+
   public shared ({ caller }) func getLiveMarketData(symbol : CryptoSymbol) : async Text {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can fetch live market data");
@@ -106,8 +133,34 @@ actor {
       };
     };
 
-    if (not (await checkCyclesSafeForOutcall())) {
-      let currentBalance = await getCycleBalance();
+    if (not internalCheckCyclesSafeForOutcall()) {
+      let currentBalance = internalGetCycleBalance();
+      Runtime.trap(
+        "❌ Canister not enough cycles for outcall (threshold: "
+        # outcallThresholdCycles.toText()
+        # " cycles, current balance: "
+        # currentBalance.toText()
+        # " cycles). Contact admin for top up! See `getOutcallCycleStatus()` for details.\n ",
+      );
+    };
+
+    await OutCall.httpGetRequest(url, [], transformRaw);
+  };
+
+  public shared ({ caller }) func fetchHistoricalPriceData(symbol : CryptoSymbol, days : Nat) : async Text {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
+      Runtime.trap("Unauthorized: Only users can fetch historical price data");
+    };
+
+    let url = switch (buildCoinGeckoHistoricalUrl(symbol, days)) {
+      case (?url) { url };
+      case (null) {
+        return "❌ Unsupported symbol: " # symbol # ". Only BTC, ETH, and XRP are supported.";
+      };
+    };
+
+    if (not internalCheckCyclesSafeForOutcall()) {
+      let currentBalance = internalGetCycleBalance();
       Runtime.trap(
         "❌ Canister not enough cycles for outcall (threshold: "
         # outcallThresholdCycles.toText()
@@ -134,8 +187,8 @@ actor {
         "❌ Unsupported symbol: " # symbol # ". Only BTC, ETH, and XRP are supported.";
       };
       case (?url) {
-        if (not (await checkCyclesSafeForOutcall())) {
-          let currentBalance = await getCycleBalance();
+        if (not internalCheckCyclesSafeForOutcall()) {
+          let currentBalance = internalGetCycleBalance();
           Runtime.trap(
             "❌ Canister not enough cycles for outcall (threshold: "
             # outcallThresholdCycles.toText()

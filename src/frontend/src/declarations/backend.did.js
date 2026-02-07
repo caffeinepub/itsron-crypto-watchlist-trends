@@ -44,6 +44,11 @@ export const idlService = IDL.Service({
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
   'checkCyclesSafeForOutcall' : IDL.Func([], [IDL.Bool], []),
   'debugFetchCoinGecko' : IDL.Func([CryptoSymbol], [IDL.Text], []),
+  'fetchHistoricalPriceData' : IDL.Func(
+      [CryptoSymbol, IDL.Nat],
+      [IDL.Text],
+      [],
+    ),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getCycleBalance' : IDL.Func([], [IDL.Nat], ['query']),
@@ -99,6 +104,11 @@ export const idlFactory = ({ IDL }) => {
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
     'checkCyclesSafeForOutcall' : IDL.Func([], [IDL.Bool], []),
     'debugFetchCoinGecko' : IDL.Func([CryptoSymbol], [IDL.Text], []),
+    'fetchHistoricalPriceData' : IDL.Func(
+        [CryptoSymbol, IDL.Nat],
+        [IDL.Text],
+        [],
+      ),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getCycleBalance' : IDL.Func([], [IDL.Nat], ['query']),

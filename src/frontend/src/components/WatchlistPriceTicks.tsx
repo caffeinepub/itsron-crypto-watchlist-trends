@@ -1,8 +1,14 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Activity, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Activity, AlertCircle } from 'lucide-react';
+import WatchlistPriceTickRow from './WatchlistPriceTickRow';
+import type { CryptoSymbol } from '../backend';
 
-export default function WatchlistPriceTicks() {
+interface WatchlistPriceTicksProps {
+  symbols: CryptoSymbol[];
+}
+
+export default function WatchlistPriceTicks({ symbols }: WatchlistPriceTicksProps) {
   return (
     <Card>
       <CardHeader>
@@ -10,16 +16,23 @@ export default function WatchlistPriceTicks() {
           <Activity className="h-5 w-5" />
           Live Price Ticks
         </CardTitle>
-        <CardDescription>Real-time price updates for your watchlist</CardDescription>
+        <CardDescription>Real-time price updates for selected cryptocurrencies</CardDescription>
       </CardHeader>
       <CardContent>
-        <Alert variant="default" className="border-blue-500/50 bg-blue-500/10">
-          <Info className="h-4 w-4 text-blue-500" />
-          <AlertTitle className="text-blue-700 dark:text-blue-400">Coming Soon</AlertTitle>
-          <AlertDescription className="text-sm">
-            Real-time price tracking is not yet available. This feature will display live price updates for cryptocurrencies in your watchlist.
-          </AlertDescription>
-        </Alert>
+        {symbols.length === 0 ? (
+          <Alert variant="default" className="border-muted">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              No cryptocurrencies selected for live tracking.
+            </AlertDescription>
+          </Alert>
+        ) : (
+          <div className="space-y-0">
+            {symbols.map((symbol) => (
+              <WatchlistPriceTickRow key={symbol} symbol={symbol} />
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

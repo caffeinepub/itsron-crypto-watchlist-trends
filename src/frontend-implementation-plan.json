@@ -1,42 +1,50 @@
 {
   "kind": "implementation_plan",
   "version": "1.0",
-  "title": "Cycle diagnostics in Backend Tester + clearer cycle-exhaustion errors on Dashboard",
+  "title": "Watchlist Live Price Ticks: replace placeholder with live market tick list and wire into Dashboard",
   "requirements": [
     {
-      "id": "REQ-20",
-      "summary": "Add Backend Tester diagnostic command(s) to fetch and display canister cycle balance/status in the SimulatedBashPanel output.",
+      "id": "REQ-26",
+      "summary": "Implement `WatchlistPriceTicks` live list UI that fetches and renders per-symbol live market ticks via the existing React Query hook and CoinGecko parsing/formatting utilities, with robust error handling.",
       "acceptanceCriteria": [
-        "A new diagnostic command (or commands) appears under an appropriate category (preferably “Phase 3: Diagnostic Tools”) to fetch and display cycle balance/status.",
-        "Running the command prints a readable output showing at minimum: current cycle balance and the configured low-cycles threshold.",
-        "The output is displayed in the existing terminal output area and is copyable like other command outputs."
+        "The `WatchlistPriceTicks` card no longer renders the “Coming Soon” `Alert` by default.",
+        "The component renders a list of one or more crypto symbols with at least: symbol label, formatted current price (USD), and a loading state per row.",
+        "Each row’s live data is fetched via `useGetLiveMarketData(symbol)` and parsed with `parseCoinGeckoResponse()` from `frontend/src/utils/coinGeckoMarketData.ts`.",
+        "If `useGetLiveMarketData` returns an error (including cycle exhaustion errors), the component shows a clear English error message in the card without crashing the page.",
+        "No user-facing text mentions “Demo Mode”."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/utils/backendTesterCommands.ts",
+          "path": "frontend/src/components/WatchlistPriceTicks.tsx",
           "operation": "modify",
-          "description": "Add one or more new 'Phase 3: Diagnostic Tools' commands that call the backend actor cycle diagnostics methods (e.g., getCycleBalance() and getOutcallCycleStatus()) and render copy/paste-friendly output (plain text with newlines) including current balance and threshold."
+          "description": "Replace the placeholder “Coming Soon” UI with a real list-based card that accepts a deterministic `symbols` prop, renders rows, aggregates and displays a clear in-card error message when any row fails (including cycle exhaustion-style messages), and uses existing shadcn-ui building blocks (e.g., Card/Alert) by composing them only (do not modify `frontend/src/components/ui/*`). Verify the component's usage instructions before implementing."
         },
         {
-          "path": "frontend/src/components/SimulatedBashPanel.tsx",
-          "operation": "modify",
-          "description": "Verify the category list rendered in the Backend Tester includes 'phase3-diagnostics' (Phase 3: Diagnostic Tools) so the new cycle diagnostic command(s) appear and can be executed within the existing terminal UI."
+          "path": "frontend/src/components/WatchlistPriceTickRow.tsx",
+          "operation": "create",
+          "description": "Create a child row component used by `WatchlistPriceTicks` so each row can safely call `useGetLiveMarketData(symbol)` (avoiding hooks-in-loops). The row should parse responses with `parseCoinGeckoResponse()` and format prices with `formatPrice()` from `frontend/src/utils/coinGeckoMarketData.ts`, and provide a per-row loading indicator/state. Verify the component's usage instructions before implementing."
         }
       ]
     },
     {
-      "id": "REQ-21",
-      "summary": "Show a clear, cycle-exhaustion-specific error message on Dashboard crypto cards when the live market data call fails due to out-of-cycles / IC0504.",
+      "id": "REQ-27",
+      "summary": "Wire `WatchlistPriceTicks` into the Dashboard with an explicit supported symbol list and accurate English card copy that does not imply a backend-backed personal watchlist.",
       "acceptanceCriteria": [
-        "When `useGetLiveMarketData(symbol)` errors with a message containing ‘out of cycles’ or ‘IC0504’, `frontend/src/components/CryptoCard.tsx` displays an English error message that explicitly mentions cycle exhaustion as the cause.",
-        "Other errors continue to display their existing error behavior (do not replace all error messages with the cycles message).",
-        "The new message does not mention demo mode and does not imply the user can self-fix without admin action."
+        "`frontend/src/pages/Dashboard.tsx` passes an explicit list of symbols into `WatchlistPriceTicks` (e.g., a subset of supported symbols such as BTC/ETH/XRP) rather than relying on an unimplemented backend watchlist.",
+        "If the UI is not using a real backend watchlist yet, the card copy clearly states what is being shown (English) without implying the user’s personal watchlist is being loaded from the backend.",
+        "The component only queries supported symbols (BTC/ETH/XRP) to avoid deterministic “Unsupported symbol” responses in the live ticks list.",
+        "The Dashboard renders without TypeScript errors after the prop/wiring change."
       ],
       "file_operations": [
         {
-          "path": "frontend/src/components/CryptoCard.tsx",
+          "path": "frontend/src/pages/Dashboard.tsx",
           "operation": "modify",
-          "description": "Update the error rendering logic to detect cycle-exhaustion failures (error message contains 'out of cycles' and/or 'IC0504') and replace only those cases with a concise English message stating the backend is out of cycles and live data is temporarily unavailable until an admin tops up cycles; keep existing behavior for all other errors."
+          "description": "Pass a deterministic supported symbol array (BTC/ETH/XRP only) into `WatchlistPriceTicks` via props; update any surrounding copy or structure as needed so the UI does not imply a backend-loaded personal watchlist is being displayed. Verify the component's usage instructions before implementing."
+        },
+        {
+          "path": "frontend/src/components/WatchlistPriceTicks.tsx",
+          "operation": "modify",
+          "description": "Update the card header/subtitle text to be accurate in English for a deterministic symbol list (not a backend watchlist), and ensure prop types align with the new Dashboard wiring. Verify the component's usage instructions before implementing."
         }
       ]
     }

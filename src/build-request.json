@@ -1,105 +1,64 @@
 {
   "kind": "build_request",
-  "title": "Prevent CoinGecko outcalls from failing due to canister cycle exhaustion + add in-app cycle diagnostics",
-  "priority": "high",
+  "title": "Fix Watchlist Live Price Ticks to show live market data instead of “Coming Soon”",
+  "priority": "normal",
   "requirements": [
     {
-      "id": "REQ-18",
-      "text": "Add backend cycle-safety checks for all CoinGecko HTTPS outcalls so the canister does not reach 0 cycles during `getLiveMarketData(symbol)` / `debugFetchCoinGecko(symbol)` execution. When the cycle balance is below a defined safety threshold, the backend must not attempt the outcall and must return a deterministic, user-facing English error message that clearly indicates the canister is low/out of cycles (and that an admin must top up cycles).",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-5"
-        ],
-        "quotes": [
-          "Fix Cycles Now"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Calling `getLiveMarketData(\"BTC\")`/`(\"ETH\")`/`(\"XRP\")` when cycles are below the configured threshold returns a clear English error string indicating low/out-of-cycles and does not attempt the HTTPS outcall.",
-        "Calling `debugFetchCoinGecko(\"BTC\")`/`(\"ETH\")`/`(\"XRP\")` when cycles are below the configured threshold returns the same class of clear low/out-of-cycles error and does not attempt the HTTPS outcall.",
-        "When cycles are sufficient, both methods continue to perform the HTTPS outcall and return the raw response `Text` as they do today.",
-        "No change to existing authorization rules: `getLiveMarketData` remains user-permission-gated; `debugFetchCoinGecko` remains admin-only."
-      ]
-    },
-    {
-      "id": "REQ-19",
-      "text": "Expose backend cycle diagnostics via new backend methods that the frontend can call without terminal/dfx access: a query method to return current canister cycle balance, plus a structured status method (e.g., balance + configured threshold + a human-readable status string) suitable for display in the in-app tester.",
-      "target": "backend",
-      "source": {
-        "messageIds": [
-          "msg-5"
-        ],
-        "quotes": [
-          "Fix Cycles Now"
-        ]
-      },
-      "acceptanceCriteria": [
-        "Backend exposes a query method that returns the current cycle balance (as a numeric type that can be reliably displayed in the UI).",
-        "Backend exposes a method that returns a cycle status payload that includes: current balance, the low-cycles threshold value used by the outcall guards, and a status indicator/message in English (e.g., OK/LOW/CRITICAL).",
-        "Cycle status methods are callable from the existing frontend actor without requiring any changes to immutable frontend hook files."
-      ]
-    },
-    {
-      "id": "REQ-20",
-      "text": "Add an in-app Cycle Status view in the Backend Tester UI by introducing one or more tester commands (in `frontend/src/utils/backendTesterCommands.ts`) that call the new backend cycle diagnostics methods and render the results in a copy/paste-friendly format in the existing `SimulatedBashPanel`.",
+      "id": "REQ-26",
+      "text": "Replace the hard-coded “Coming Soon” placeholder in `frontend/src/components/WatchlistPriceTicks.tsx` with a live list UI that fetches and displays live market data ticks using the existing `useGetLiveMarketData(symbol)` React Query hook and the existing CoinGecko parsing/formatting utilities.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-5"
+          "recent-7",
+          "recent-9"
         ],
         "quotes": [
-          "Fix Cycles Now"
+          "Fix Live Price Ticks",
+          "The screenshot shows the component is still hard‑coded to always show “Coming Soon.” There is no live price tick implementation and no wiring to your real watchlist data."
         ]
       },
       "acceptanceCriteria": [
-        "A new diagnostic command (or commands) appears under an appropriate category (preferably “Phase 3: Diagnostic Tools”) to fetch and display cycle balance/status.",
-        "Running the command prints a readable output showing at minimum: current cycle balance and the configured low-cycles threshold.",
-        "The output is displayed in the existing terminal output area and is copyable like other command outputs."
+        "The `WatchlistPriceTicks` card no longer renders the “Coming Soon” `Alert` by default.",
+        "The component renders a list of one or more crypto symbols with at least: symbol label, formatted current price (USD), and a loading state per row.",
+        "Each row’s live data is fetched via `useGetLiveMarketData(symbol)` and parsed with `parseCoinGeckoResponse()` from `frontend/src/utils/coinGeckoMarketData.ts`.",
+        "If `useGetLiveMarketData` returns an error (including cycle exhaustion errors), the component shows a clear English error message in the card without crashing the page.",
+        "No user-facing text mentions “Demo Mode”."
       ]
     },
     {
-      "id": "REQ-21",
-      "text": "Improve user-facing error handling on the Dashboard crypto cards so cycle-exhaustion failures are understandable: when the live market data request fails with an IC rejection containing ‘out of cycles’ / IC0504, show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
+      "id": "REQ-27",
+      "text": "Wire `WatchlistPriceTicks` into the Dashboard so it receives a deterministic symbol list to display (until backend watchlist endpoints exist), and ensure the card header/subtitle remain accurate and non-misleading in English.",
       "target": "frontend",
       "source": {
         "messageIds": [
-          "msg-5"
+          "recent-7",
+          "recent-9"
         ],
         "quotes": [
-          "Fix Cycles Now"
+          "Fix Live Price Ticks",
+          "fetches your actual watchlist from the backend • runs `useGetLiveMarketData()` for each symbol • displays price updates in the card instead of the placeholder message"
         ]
       },
       "acceptanceCriteria": [
-        "When `useGetLiveMarketData(symbol)` errors with a message containing ‘out of cycles’ or ‘IC0504’, `frontend/src/components/CryptoCard.tsx` displays an English error message that explicitly mentions cycle exhaustion as the cause.",
-        "Other errors continue to display their existing error behavior (do not replace all error messages with the cycles message).",
-        "The new message does not mention demo mode and does not imply the user can self-fix without admin action."
+        "`frontend/src/pages/Dashboard.tsx` passes an explicit list of symbols into `WatchlistPriceTicks` (e.g., a subset of supported symbols such as BTC/ETH/XRP) rather than relying on an unimplemented backend watchlist.",
+        "If the UI is not using a real backend watchlist yet, the card copy clearly states what is being shown (English) without implying the user’s personal watchlist is being loaded from the backend.",
+        "The component only queries supported symbols (BTC/ETH/XRP) to avoid deterministic “Unsupported symbol” responses in the live ticks list.",
+        "The Dashboard renders without TypeScript errors after the prop/wiring change."
       ]
     }
   ],
   "constraints": [
-    "Backend must remain single-actor; all Motoko logic stays in `backend/main.mo`.",
-    "Do not edit frontend files under `frontend/src/components/ui`, `frontend/src/hooks/useInternetIdentity.ts(x)`, `frontend/src/hooks/useActor.ts`, or `frontend/src/main.tsx` (compose around them instead).",
-    "Use English for any user-facing text.",
-    "Do not add additional backend canisters/services for cycle management (single backend only)."
+    "Do not modify files under `frontend/src/components/ui` (compose existing shadcn components instead).",
+    "Do not edit immutable paths: `frontend/src/hooks/useInternetIdentity.ts`, `frontend/src/hooks/useInternetIdentity.tsx`, `frontend/src/hooks/useActor.ts`, `frontend/src/main.tsx`, and anything under `frontend/src/components/ui`.",
+    "Keep backend architecture single-actor; no new backend services or databases."
   ],
   "nonGoals": [
-    "Implementing true ‘automatic top-ups’ from an external cycles wallet/ledger/cycles-minting flow (not possible purely from inside a single canister without external funding).",
-    "Adding third-party monitoring/alerting integrations.",
-    "Adding new product features unrelated to cycle reliability."
+    "Implementing backend watchlist storage/endpoints (add/remove/list watchlist) in Motoko.",
+    "Adding real-time streaming (WebSockets/push) for ticks; polling via React Query is sufficient.",
+    "Changing CoinGecko backend outcall behavior beyond what’s needed for the UI to display existing live responses."
   ],
   "imageRequirements": {
     "required": [],
     "edits": []
-  },
-  "userProfileUpdate": {
-    "goalsToAdd": [],
-    "goalsToRemove": [],
-    "preferencesToAdd": [],
-    "preferencesToRemove": [],
-    "miscToAdd": [],
-    "miscToRemove": [],
-    "fieldsToSet": {},
-    "fieldsToDelete": []
   }
 }

@@ -122,6 +122,28 @@ export function useGetLiveMarketData(symbol: CryptoSymbol) {
 }
 
 // ============================================================================
+// CRYPTO FUNCTIONALITY - HISTORICAL PRICE DATA
+// ============================================================================
+
+export function useGetHistoricalPriceData(symbol: CryptoSymbol, days: number) {
+  const { actor, isFetching: actorFetching } = useActor();
+  const { isInitializing } = useInternetIdentity();
+
+  return useQuery<string>({
+    queryKey: ['historicalPriceData', symbol, days],
+    queryFn: async () => {
+      if (!actor) throw new Error('Actor not available');
+      return actor.fetchHistoricalPriceData(symbol, BigInt(days));
+    },
+    enabled: !!actor && !actorFetching && !isInitializing,
+    retry: 1,
+    retryDelay: 2000,
+    staleTime: 300000, // Consider data fresh for 5 minutes (historical data changes slowly)
+    refetchOnWindowFocus: false, // Don't refetch on window focus for historical data
+  });
+}
+
+// ============================================================================
 // CRYPTO FUNCTIONALITY STUBS (Backend not yet implemented)
 // ============================================================================
 

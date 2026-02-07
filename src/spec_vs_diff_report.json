@@ -1,52 +1,34 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T17:18:32.740Z",
-  "summary": "Implemented new backend cycle diagnostic APIs and added cycle-exhaustion-specific UI messaging on crypto cards, but the backend outcall guard behavior does not match the requirement (it traps instead of returning a deterministic Text error) and there is no visible implementation for guarding `debugFetchCoinGecko` or adding Backend Tester diagnostic commands in the provided diff excerpt. Some user-facing strings include emojis, which conflicts with the English-only constraint.",
+  "generatedAt": "2026-02-07T20:10:17.864Z",
+  "summary": "Implemented a new per-symbol tick row component and updated WatchlistPriceTicks to render a live list driven by a symbols prop; Dashboard now passes a deterministic supported symbol list (BTC/ETH/XRP). One acceptance criterion appears only partially met: error messaging is shown per-row rather than clearly at the card level.",
   "missing_requirements": [
     {
-      "id": "REQ-18",
-      "requirement": "When cycles are below the configured safety threshold, `getLiveMarketData(symbol)` must not attempt the HTTPS outcall and must return a deterministic, user-facing English error message (as Text), and the same for `debugFetchCoinGecko(symbol)`; when sufficient cycles, behavior remains returning raw response Text.",
-      "reason": "`getLiveMarketData` currently calls `Runtime.trap(...)` when cycles are low, which rejects rather than returning a deterministic Text error string as required. The diff excerpt also does not show any corresponding cycle guard for `debugFetchCoinGecko(symbol)`.",
+      "id": "REQ-26",
+      "requirement": "If useGetLiveMarketData returns an error (including cycle exhaustion errors), the component shows a clear English error message in the card without crashing the page.",
+      "reason": "The diff shows error messaging rendered inside each WatchlistPriceTickRow (e.g., 'Service unavailable' / 'Error loading'), but WatchlistPriceTicks itself does not display a card-level error message when errors occur. The requirement/AC explicitly calls for an error message \"in the card\".",
       "evidence": [
-        "backend/main.mo (uses `Runtime.trap(\"❌ Canister not enough cycles for outcall ...\")` inside `getLiveMarketData`)",
-        "backend/main.mo (no `debugFetchCoinGecko` implementation visible in provided truncated excerpt)"
-      ]
-    },
-    {
-      "id": "REQ-20",
-      "requirement": "Add one or more Backend Tester commands in `frontend/src/utils/backendTesterCommands.ts` under an appropriate category (preferably “Phase 3: Diagnostic Tools”) to call the new backend cycle diagnostics methods and print copy/paste-friendly output including at minimum current cycle balance and the configured threshold.",
-      "reason": "The diff shows category infrastructure for `phase3-diagnostics`, but the provided excerpt does not show any newly-added command that calls `getCycleBalance()` / `getOutcallCycleStatus()` and renders balance/threshold output.",
-      "evidence": [
-        "frontend/src/utils/backendTesterCommands.ts (excerpt shows categories and existing market-data commands; no cycle-status command visible in truncated content)"
+        "frontend/src/components/WatchlistPriceTicks.tsx",
+        "frontend/src/components/WatchlistPriceTickRow.tsx"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Added a `backend/migration.mo` module and wired `(with migration = Migration.run)` without an explicit request for a migration layer.",
-      "reason": "The BuildRequest focuses on cycle-safety for outcalls and cycle diagnostics + UI surfacing; it does not request adding a migration module/file.",
+      "description": "Added 24h change indicator with up/down trend icons and color styling in the watchlist live tick rows.",
+      "reason": "REQ-26 only requires symbol label, formatted current price (USD), and loading state per row. Displaying 24h change and trend icons is additional UI not requested.",
       "evidence": [
-        "backend/migration.mo",
-        "backend/main.mo (imports `Migration \"migration\";` and uses `(with migration = Migration.run)`)"
-      ]
-    },
-    {
-      "description": "User-facing cycle status strings include emoji icons (e.g., ✅/⚠️/❌).",
-      "reason": "Constraint requires English for any user-facing text; emojis are additional non-English symbols and may violate the strict interpretation of this constraint.",
-      "evidence": [
-        "backend/main.mo (`getOutcallCycleStatus` status strings: \"✅ Sufficient cycles...\", \"⚠️ Warning...\", \"❌ Critical...\")",
-        "backend/main.mo (`getLiveMarketData` error/trap string begins with \"❌ ...\")"
+        "frontend/src/components/WatchlistPriceTickRow.tsx"
       ]
     }
   ],
-  "confidence": 0.64,
+  "confidence": 0.66,
   "changed_files": [
-    "backend/main.mo",
-    "backend/migration.mo",
     "frontend-file-summaries.txt",
-    "frontend/src/components/CryptoCard.tsx",
-    "frontend/src/utils/backendTesterCommands.ts",
+    "frontend/src/components/WatchlistPriceTickRow.tsx",
+    "frontend/src/components/WatchlistPriceTicks.tsx",
+    "frontend/src/pages/Dashboard.tsx",
     "project_state.json"
   ]
 }

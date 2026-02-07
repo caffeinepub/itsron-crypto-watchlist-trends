@@ -43,6 +43,7 @@ export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     checkCyclesSafeForOutcall(): Promise<boolean>;
     debugFetchCoinGecko(symbol: CryptoSymbol): Promise<string>;
+    fetchHistoricalPriceData(symbol: CryptoSymbol, days: bigint): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCycleBalance(): Promise<bigint>;

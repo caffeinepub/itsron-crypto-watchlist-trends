@@ -2,10 +2,11 @@
   "kind": "feature_evidence_report",
   "features": [
     {
-      "featureId": "feature-add-an-in-app-cycle-status-view-in-the-backend-tester-ui-by-introducing-one-or-more-tester-commands-in-frontend-src-utils-backendtestercommands-ts-that-call-the-new-backend-cycle-diagnostics-methods-and-render-the-results-in-a-copy-paste-friendly-format-in-the-existing-simulatedbashpanel",
-      "featureTitle": "Add an in-app Cycle Status view in the Backend Tester UI by introducing one or more tester commands (in `frontend/src/utils/backendTesterCommands.ts`) that call the new backend cycle diagnostics methods and render the results in a copy/paste-friendly format in the existing `SimulatedBashPanel`.",
+      "featureId": "feature-replace-the-hard-coded-coming-soon-placeholder-in-frontend-src-components-watchlistpriceticks-tsx-with-a-live-list-ui-that-fetches-and-displays-live-market-data-ticks-using-the-existing-usegetlivemarketdata-symbol-react-query-hook-and-the-existing-coingecko-parsing-formatting-utilities",
+      "featureTitle": "Replace the hard-coded “Coming Soon” placeholder in `frontend/src/components/WatchlistPriceTicks.tsx` with a live list UI that fetches and displays live market data ticks using the existing `useGetLiveMarketData(symbol)` React Query hook and the existing CoinGecko parsing/formatting utilities.",
       "files": [
-        "frontend/src/utils/backendTesterCommands.ts"
+        "frontend/src/components/WatchlistPriceTickRow.tsx",
+        "frontend/src/components/WatchlistPriceTicks.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -17,15 +18,16 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-20"
+        "REQ-26"
       ],
       "confidence": "high"
     },
     {
-      "featureId": "feature-improve-user-facing-error-handling-on-the-dashboard-crypto-cards-so-cycle-exhaustion-failures-are-understandable-when-the-live-market-data-request-fails-with-an-ic-rejection-containing-out-of-cycles-ic0504-show-a-concise-english-message-indicating-the-backend-is-out-of-cycles-and-live-data-is-temporarily-unavailable-until-cycles-are-topped-up",
-      "featureTitle": "Improve user-facing error handling on the Dashboard crypto cards so cycle-exhaustion failures are understandable: when the live market data request fails with an IC rejection containing ‘out of cycles’ / IC0504, show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
+      "featureId": "feature-wire-watchlistpriceticks-into-the-dashboard-so-it-receives-a-deterministic-symbol-list-to-display-until-backend-watchlist-endpoints-exist-and-ensure-the-card-header-subtitle-remain-accurate-and-non-misleading-in-english",
+      "featureTitle": "Wire `WatchlistPriceTicks` into the Dashboard so it receives a deterministic symbol list to display (until backend watchlist endpoints exist), and ensure the card header/subtitle remain accurate and non-misleading in English.",
       "files": [
-        "frontend/src/components/CryptoCard.tsx"
+        "frontend/src/components/WatchlistPriceTicks.tsx",
+        "frontend/src/pages/Dashboard.tsx"
       ],
       "components": [
         "authorization@4.0.0",
@@ -37,7 +39,7 @@
         "github-export-icp-cli@1.0.0"
       ],
       "testIds": [
-        "REQ-21"
+        "REQ-27"
       ],
       "confidence": "high"
     }

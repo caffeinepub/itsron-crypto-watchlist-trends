@@ -2,8 +2,11 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Info } from 'lucide-react';
+import { TrendingUp, TrendingDown, AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useGetHistoricalPriceData } from '../hooks/useQueries';
+import { parseCoinGeckoHistoricalResponse, type HistoricalDataPoint } from '../utils/coinGeckoHistoricalData';
 
 interface ForecastChartProps {
   symbol: string;
@@ -19,42 +22,26 @@ interface ChartDataPoint {
   movingAverage?: number;
 }
 
-interface HistoricalDataPoint {
-  timestamp: number;
-  price: number;
-}
-
 export default function ForecastChart({ 
   symbol, 
   movingAveragePeriod = 7,
   forecastHorizon = 5 
 }: ForecastChartProps) {
-  // Generate sample historical data for local simulation
-  const historicalData = useMemo(() => {
-    const now = Date.now();
-    const dayMs = 24 * 60 * 60 * 1000;
-    const basePrice = 50000; // Base price for simulation
-    const data: HistoricalDataPoint[] = [];
-    
-    for (let i = 30; i >= 0; i--) {
-      const timestamp = now - i * dayMs;
-      // Generate somewhat realistic price movement
-      const randomWalk = Math.sin(i / 5) * 5000 + (Math.random() - 0.5) * 2000;
-      const price = basePrice + randomWalk;
-      data.push({
-        timestamp,
-        price,
-      });
-    }
-    
-    return data;
-  }, []);
+  // Fetch historical data from backend (30 days)
+  const { data: historicalResponseText, isLoading, error, isFetched } = useGetHistoricalPriceData(symbol, 30);
+
+  // Parse the historical data response
+  const parsedHistoricalData = useMemo(() => {
+    if (!historicalResponseText) return null;
+    return parseCoinGeckoHistoricalResponse(historicalResponseText);
+  }, [historicalResponseText]);
 
   const { chartData, stats } = useMemo(() => {
-    if (!historicalData || historicalData.length === 0) {
+    if (!parsedHistoricalData?.success || !parsedHistoricalData.data || parsedHistoricalData.data.length === 0) {
       return { chartData: [], stats: null };
     }
 
+    const historicalData = parsedHistoricalData.data;
     const prices = historicalData.map((point) => ({
       timestamp: point.timestamp,
       price: point.price,
@@ -136,7 +123,7 @@ export default function ForecastChart({
         dataPoints: n,
       },
     };
-  }, [historicalData, movingAveragePeriod, forecastHorizon]);
+  }, [parsedHistoricalData, movingAveragePeriod, forecastHorizon]);
 
   const formatPrice = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -188,23 +175,77 @@ export default function ForecastChart({
     );
   };
 
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Loader2 className="h-5 w-5 animate-spin text-primary" />
+              <CardTitle>Loading {symbol} Analysis</CardTitle>
+            </div>
+            <CardDescription>
+              Fetching historical price data from CoinGecko...
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Skeleton className="h-[400px] w-full" />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || (isFetched && !parsedHistoricalData?.success)) {
+    const errorMessage = parsedHistoricalData?.error || (error as Error)?.message || 'Failed to load historical data';
+    
+    return (
+      <div className="space-y-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Unable to Load Historical Data</AlertTitle>
+          <AlertDescription className="text-sm">
+            {errorMessage}
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  // No data state
+  if (!chartData || chartData.length === 0) {
+    return (
+      <div className="space-y-4">
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>No Data Available</AlertTitle>
+          <AlertDescription className="text-sm">
+            Historical price data for {symbol} could not be retrieved.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <Alert variant="default" className="border-blue-500/50 bg-blue-500/10">
-        <Info className="h-4 w-4 text-blue-500" />
-        <AlertTitle className="text-blue-700 dark:text-blue-400">Sample Data</AlertTitle>
-        <AlertDescription className="text-sm">
-          This chart displays locally generated sample data for demonstration purposes. Historical price data from the backend is not yet available.
-        </AlertDescription>
-      </Alert>
-
       <Card>
         <CardHeader>
           <div className="flex items-start justify-between">
             <div>
               <CardTitle>{symbol} Analysis</CardTitle>
               <CardDescription>
-                Price trends and forecast based on sample data
+                Price trends and forecast based on 30-day historical data
               </CardDescription>
             </div>
             {stats && (

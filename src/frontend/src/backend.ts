@@ -126,6 +126,7 @@ export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
     checkCyclesSafeForOutcall(): Promise<boolean>;
     debugFetchCoinGecko(symbol: CryptoSymbol): Promise<string>;
+    fetchHistoricalPriceData(symbol: CryptoSymbol, days: bigint): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCycleBalance(): Promise<bigint>;
@@ -192,6 +193,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.debugFetchCoinGecko(arg0);
+            return result;
+        }
+    }
+    async fetchHistoricalPriceData(arg0: CryptoSymbol, arg1: bigint): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.fetchHistoricalPriceData(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.fetchHistoricalPriceData(arg0, arg1);
             return result;
         }
     }

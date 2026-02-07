@@ -40,6 +40,7 @@ export interface _SERVICE {
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
   'checkCyclesSafeForOutcall' : ActorMethod<[], boolean>,
   'debugFetchCoinGecko' : ActorMethod<[CryptoSymbol], string>,
+  'fetchHistoricalPriceData' : ActorMethod<[CryptoSymbol, bigint], string>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCycleBalance' : ActorMethod<[], bigint>,

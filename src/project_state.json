@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 15,
+  "projectStateVersion": 19,
   "summary": "Project now includes ensuring production reliability of CoinGecko HTTP outcalls by preventing backend canister cycle exhaustion (auto top-ups/monitoring) in addition to live-mode go-live prep and in-app debug/testing.",
   "architectural_notes": [
     "Frontend depends on a cached backend canister ID (e.g., in localStorage); actor creation can stall if the cached ID is missing/wiped and auto-discovery does not run.",
@@ -12,7 +12,8 @@
   "known_issues": [
     "Clearing browser cache/cookies can wipe the cached backend canister ID, causing the app to remain stuck on “Connecting to backend” (actor never begins fetching; stage remains idle) even when Internet Identity is authenticated.",
     "Coverage report indicates `debugFetchCoinGecko` has not been added to `backend/main.mo` yet despite a deployment; needs implementation + redeploy + test.",
-    "Backend canister ran out of cycles, causing IC0504 rejection on CoinGecko HTTPS outcalls and breaking live market data for all symbols until cycles are replenished."
+    "Backend canister ran out of cycles, causing IC0504 rejection on CoinGecko HTTPS outcalls and breaking live market data for all symbols until cycles are replenished.",
+    "Watchlist price ticks section is still hard-coded to always show “Coming Soon” and is not wired to live market data (no `useGetLiveMarketData()` per symbol / no watchlist-to-symbol binding)."
   ],
   "isFixRequest": true,
   "existing_features": [
@@ -85,6 +86,46 @@
       "title": "Improve user-facing error handling on the Dashboard crypto cards so cycle-exhaustion failures are understandable: when the live market data request fails with an IC rejection containing ‘out of cycles’ / IC0504, show a concise English message indicating the backend is out of cycles and live data is temporarily unavailable until cycles are topped up.",
       "reqIds": [
         "REQ-21"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-expose-the-new-backend-historical-data-method-through-a-react-query-hook-in-frontend-src-hooks-usequeries-ts-and-ensure-it-only-runs-when-the-backend-actor-is-available-and-identity-initialization-has-completed",
+      "title": "Expose the new backend historical-data method through a React Query hook in `frontend/src/hooks/useQueries.ts` and ensure it only runs when the backend actor is available and identity initialization has completed.",
+      "reqIds": [
+        "REQ-23"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-update-frontend-src-components-forecastchart-tsx-to-use-live-historical-price-data-from-the-backend-instead-of-generating-local-sample-history-and-update-all-user-facing-text-to-reflect-live-data-english",
+      "title": "Update `frontend/src/components/ForecastChart.tsx` to use live historical price data from the backend instead of generating local sample history, and update all user-facing text to reflect live data (English).",
+      "reqIds": [
+        "REQ-24"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-ensure-the-crypto-detail-analysis-dialog-continues-to-work-end-to-end-using-the-updated-forecastchart-and-verify-the-user-flow-from-dashboard-cryptocard-view-analysis-forecast-renders-live-data-backed-analysis-for-supported-symbols",
+      "title": "Ensure the Crypto detail analysis dialog continues to work end-to-end using the updated ForecastChart, and verify the user flow from Dashboard -> CryptoCard -> View Analysis & Forecast renders live-data-backed analysis for supported symbols.",
+      "reqIds": [
+        "REQ-25"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-replace-the-hard-coded-coming-soon-placeholder-in-frontend-src-components-watchlistpriceticks-tsx-with-a-live-list-ui-that-fetches-and-displays-live-market-data-ticks-using-the-existing-usegetlivemarketdata-symbol-react-query-hook-and-the-existing-coingecko-parsing-formatting-utilities",
+      "title": "Replace the hard-coded “Coming Soon” placeholder in `frontend/src/components/WatchlistPriceTicks.tsx` with a live list UI that fetches and displays live market data ticks using the existing `useGetLiveMarketData(symbol)` React Query hook and the existing CoinGecko parsing/formatting utilities.",
+      "reqIds": [
+        "REQ-26"
+      ],
+      "version": 1
+    },
+    {
+      "id": "feature-wire-watchlistpriceticks-into-the-dashboard-so-it-receives-a-deterministic-symbol-list-to-display-until-backend-watchlist-endpoints-exist-and-ensure-the-card-header-subtitle-remain-accurate-and-non-misleading-in-english",
+      "title": "Wire `WatchlistPriceTicks` into the Dashboard so it receives a deterministic symbol list to display (until backend watchlist endpoints exist), and ensure the card header/subtitle remain accurate and non-misleading in English.",
+      "reqIds": [
+        "REQ-27"
       ],
       "version": 1
     }
@@ -214,6 +255,26 @@
       "reqIds": [
         "REQ-19"
       ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-18",
+      "summary": "Switch the Analysis/Forecast tab from sample/local simulation data to live backend-powered data (e.g., real historical/analysis inputs), wiring the Analysis UI to fetch and render real data instead of placeholders.",
+      "reqIds": [],
+      "status": "pending"
+    },
+    {
+      "id": "AR-19",
+      "summary": "Add a new backend method that fetches historical price data from CoinGecko for a given crypto symbol so the Analysis/Forecast UI can use live historical inputs instead of locally generated sample data.",
+      "reqIds": [
+        "REQ-22"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-20",
+      "summary": "Fix Watchlist Live Price Ticks UI by replacing the hard-coded “Coming Soon” block in `WatchlistPriceTicks` with real rendering: load watchlist symbols from backend (if available) and/or use existing watchlist state, run `useGetLiveMarketData()` per symbol, and display live price tick updates instead of the placeholder.",
+      "reqIds": [],
       "status": "pending"
     }
   ],
