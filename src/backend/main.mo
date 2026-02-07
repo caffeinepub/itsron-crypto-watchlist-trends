@@ -40,7 +40,6 @@ actor {
     userProfiles.add(caller, profile);
   };
 
-  /// Maps "BTC" to proper Bitcoin ID for API lookup (returns None if no mapping found).
   func mapToApiId(symbol : Text) : ?Text {
     switch (symbol) {
       case ("BTC") { ?"bitcoin" };
@@ -50,7 +49,6 @@ actor {
     };
   };
 
-  /// Public endpoint to fetch live market data from CoinGecko using crypto symbol.
   public shared ({ caller }) func getLiveMarketData(symbol : CryptoSymbol) : async Text {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can fetch live market data");
@@ -67,38 +65,44 @@ actor {
     await OutCall.httpGetRequest(url, [], transformRaw);
   };
 
-  /// Logs outcall params and returns response as-is for debugging.
-  public shared ({ caller }) func debugFetchCoinGecko(symbol : Text) : async Text {
+  public shared ({ caller }) func debugFetchCoinGecko(symbol : CryptoSymbol) : async Text {
     if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can use debug endpoints");
+      Runtime.trap("Unauthorized: Only admins can use debug functions");
     };
 
-    let apiId = switch (mapToApiId(symbol)) {
-      case (?id) { id };
+    let url = switch (buildCoinGeckoUrl(symbol)) {
+      case (?url) {
+        Debug.print("DEBUG: Fetching from: " # url);
+        url;
+      };
       case (null) {
-        return "Unsupported symbol: " # symbol # ". Use BTC, ETH, or XRP.";
+        return "❌ Error: Could not build URL for symbol: " # symbol;
       };
     };
 
-    let url = "https://api.coingecko.com/api/v3/simple/price?ids=" # apiId # "&vs_currencies=usd";
-
-    await resolveDebugOutcall(caller, url);
+    await debugHttpRequest(url);
   };
 
-  /// Query transform to forward response unchanged.
+  func buildCoinGeckoUrl(symbol : CryptoSymbol) : ?Text {
+    func baseUrl(id : Text) : Text {
+      "https://api.coingecko.com/api/v3/simple/price?ids=" # id # "&vs_currencies=usd";
+    };
+
+    switch (symbol) {
+      case ("BTC") { ?baseUrl("bitcoin") };
+      case ("ETH") { ?baseUrl("ethereum") };
+      case ("XRP") { ?baseUrl("ripple") };
+      case (_) { null };
+    };
+  };
+
   public query func transformRaw(input : OutCall.TransformationInput) : async OutCall.TransformationOutput {
     OutCall.transform(input);
   };
 
-  /// Logs and performs CoinGecko debug request (returns raw response).
-  func resolveDebugOutcall(caller : Principal, url : Text) : async Text {
-    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
-      Runtime.trap("Unauthorized: Only admins can use debug endpoints");
-    };
-
-    Debug.print("[DEBUG] Performing HTTP debug GET request to: " # url);
+  func debugHttpRequest(url : Text) : async Text {
     let response = await OutCall.httpGetRequest(url, [], transformRaw);
-    Debug.print("[DEBUG] Raw HTTP response from URL: " # url # "\n" # response);
+    Debug.print("DEBUG: Raw HTTP response from URL: " # url # "\n" # response);
     response;
   };
 };

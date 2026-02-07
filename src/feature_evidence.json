@@ -1,4 +1,25 @@
 {
   "kind": "feature_evidence_report",
-  "features": []
+  "features": [
+    {
+      "featureId": "feature-add-a-developer-facing-documentation-file-that-includes-the-exact-deploy-and-test-commands-to-validate-raw-coingecko-responses-via-dfx-using-the-canister-name-itsron-crypto-backend-and-covering-btc-eth-and-xrp",
+      "featureTitle": "Add a developer-facing documentation file that includes the exact deploy and test commands to validate raw CoinGecko responses via `dfx`, using the canister name `itsron_crypto_backend` and covering BTC, ETH, and XRP.",
+      "files": [
+        "frontend/docs/coingecko-debug-dfx.md"
+      ],
+      "components": [
+        "authorization@4.0.0",
+        "http-outcalls@3.0.0",
+        "core-infrastructure@1.0.2",
+        "shadcn-ui@1.0.0",
+        "build-template-react@1.0.0",
+        "initial-app@1.0.0",
+        "github-export-icp-cli@1.0.0"
+      ],
+      "testIds": [
+        "REQ-8"
+      ],
+      "confidence": "high"
+    }
+  ]
 }

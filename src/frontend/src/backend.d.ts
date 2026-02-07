@@ -36,21 +36,12 @@ export enum UserRole {
 }
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    /**
-     * / Logs outcall params and returns response as-is for debugging.
-     */
-    debugFetchCoinGecko(symbol: string): Promise<string>;
+    debugFetchCoinGecko(symbol: CryptoSymbol): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
-    /**
-     * / Public endpoint to fetch live market data from CoinGecko using crypto symbol.
-     */
     getLiveMarketData(symbol: CryptoSymbol): Promise<string>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    /**
-     * / Query transform to forward response unchanged.
-     */
     transformRaw(input: TransformationInput): Promise<TransformationOutput>;
 }

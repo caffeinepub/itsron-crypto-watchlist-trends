@@ -1,16 +1,26 @@
 {
   "schemaVersion": "1.0.0",
-  "projectStateVersion": 5,
+  "projectStateVersion": 9,
   "summary": "IC/Motoko crypto backend canister (itsron_crypto_backend) that fetches live market data (CoinGecko HTTP outcall) and a frontend that must correctly resolve the backend canister ID; currently troubleshooting connectivity/demo-mode and validating live market data calls.",
   "architectural_notes": [
     "Frontend depends on a cached backend canister ID (e.g., in localStorage); actor creation can stall if the cached ID is missing/wiped and auto-discovery does not run.",
     "Backend canister `itsron_crypto_backend` exposes `getLiveMarketData(symbol)` and will add a `debugFetchCoinGecko(symbol)` function that performs an HTTP outcall to the CoinGecko URL builder and returns the raw response for debugging."
   ],
   "known_issues": [
-    "Clearing browser cache/cookies can wipe the cached backend canister ID, causing the app to remain stuck on “Connecting to backend” (actor never begins fetching; stage remains idle) even when Internet Identity is authenticated."
+    "Clearing browser cache/cookies can wipe the cached backend canister ID, causing the app to remain stuck on “Connecting to backend” (actor never begins fetching; stage remains idle) even when Internet Identity is authenticated.",
+    "Coverage report indicates `debugFetchCoinGecko` has not been added to `backend/main.mo` yet despite a deployment; needs implementation + redeploy + test."
   ],
   "isFixRequest": true,
-  "existing_features": [],
+  "existing_features": [
+    {
+      "id": "feature-add-a-developer-facing-documentation-file-that-includes-the-exact-deploy-and-test-commands-to-validate-raw-coingecko-responses-via-dfx-using-the-canister-name-itsron-crypto-backend-and-covering-btc-eth-and-xrp",
+      "title": "Add a developer-facing documentation file that includes the exact deploy and test commands to validate raw CoinGecko responses via `dfx`, using the canister name `itsron_crypto_backend` and covering BTC, ETH, and XRP.",
+      "reqIds": [
+        "REQ-8"
+      ],
+      "version": 1
+    }
+  ],
   "new_feature_requests": [
     {
       "id": "AR-1",
@@ -39,6 +49,38 @@
       "summary": "Preserve the existing user-profile and authorization behavior currently implemented in `backend/main.mo` (profile getters/setter and access control mixin) while adding the new crypto debug and live-market-data functions.",
       "reqIds": [
         "REQ-3"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-5",
+      "summary": "Implement `debugFetchCoinGecko(symbol : CryptoSymbol) : async Text` in `backend/main.mo` exactly matching the user-provided behavior: it must switch on `buildCoinGeckoUrl(symbol)`, print the URL being fetched, perform `OutCall.httpGetRequest(url, [], transform)`, print the raw response, and return the raw response; when the URL cannot be built, it must return the error text `\"❌ Error: Could not build URL for symbol: \" # symbol`.",
+      "reqIds": [
+        "REQ-4"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-6",
+      "summary": "Redeploy the backend canister after implementing `debugFetchCoinGecko`, and verify it works by calling it for supported symbols (at minimum: BTC, ETH, XRP) and confirming the call returns the raw CoinGecko HTTP response as `Text`.",
+      "reqIds": [
+        "REQ-5"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-7",
+      "summary": "Ensure the backend canister exposes an admin-only `debugFetchCoinGecko(symbol : CryptoSymbol) : async Text` method that returns the raw CoinGecko HTTP response body as `Text` for supported symbols (BTC, ETH, XRP) and returns the exact error text `\"❌ Error: Could not build URL for symbol: \" # symbol` when the URL cannot be built.",
+      "reqIds": [
+        "REQ-6"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": "AR-8",
+      "summary": "Refactor `getLiveMarketData(symbol : CryptoSymbol)` to use the same CoinGecko URL-building logic as `debugFetchCoinGecko` (i.e., `buildCoinGeckoUrl(symbol)`) so both methods are consistent for BTC/ETH/XRP and unsupported symbol handling is deterministic.",
+      "reqIds": [
+        "REQ-7"
       ],
       "status": "pending"
     }

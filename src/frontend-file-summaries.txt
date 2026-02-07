@@ -34,5 +34,6 @@
   "frontend/src/components/ConnectionDetails.tsx": "Collapsible diagnostic panel component displaying connection state booleans (authenticated, actor ready, admin loading), current initialization stage, elapsed time, error messages, and copy-to-clipboard functionality for debug summary sharing.",
   "frontend/src/hooks/useActorEnhanced.ts": "Enhanced wrapper hook around useActor that adds error handling, timeout detection, retry mechanism, and comprehensive diagnostics tracking (removed backend admin error message fetch since method doesn't exist).",
   "frontend/src/components/BackendTesterEntryPoint.tsx": "Reusable Backend Tester entry point component that is always clickable in all states, now navigates non-admin users to limited mode with clear English toast feedback explaining limited access instead of blocking navigation.",
-  "frontend/src/components/WatchlistPriceTicks.tsx": "Simplified price ticks component that displays a \"Demo Mode\" alert indicating backend crypto functionality is not yet implemented, removing all non-functional live price display logic."
+  "frontend/src/components/WatchlistPriceTicks.tsx": "Simplified price ticks component that displays a \"Demo Mode\" alert indicating backend crypto functionality is not yet implemented, removing all non-functional live price display logic.",
+  "frontend/docs/coingecko-debug-dfx.md": "Developer documentation with exact dfx deploy and test commands for the debugFetchCoinGecko function covering BTC, ETH, and XRP symbols with expected behavior descriptions."
 }

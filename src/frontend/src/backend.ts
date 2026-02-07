@@ -119,22 +119,13 @@ export enum UserRole {
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
-    /**
-     * / Logs outcall params and returns response as-is for debugging.
-     */
-    debugFetchCoinGecko(symbol: string): Promise<string>;
+    debugFetchCoinGecko(symbol: CryptoSymbol): Promise<string>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
-    /**
-     * / Public endpoint to fetch live market data from CoinGecko using crypto symbol.
-     */
     getLiveMarketData(symbol: CryptoSymbol): Promise<string>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     isCallerAdmin(): Promise<boolean>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
-    /**
-     * / Query transform to forward response unchanged.
-     */
     transformRaw(input: TransformationInput): Promise<TransformationOutput>;
 }
 import type { UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
@@ -168,7 +159,7 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async debugFetchCoinGecko(arg0: string): Promise<string> {
+    async debugFetchCoinGecko(arg0: CryptoSymbol): Promise<string> {
         if (this.processError) {
             try {
                 const result = await this.actor.debugFetchCoinGecko(arg0);

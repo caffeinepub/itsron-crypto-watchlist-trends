@@ -1,57 +1,54 @@
 {
   "kind": "spec_vs_diff_report",
   "version": "1.0",
-  "generatedAt": "2026-02-07T14:09:33.817Z",
-  "summary": "The diff adds `getLiveMarketData` and `debugFetchCoinGecko` to `backend/main.mo`, but several REQ-1 specifics are not met (signature/type, exact error text, and required log prefixes). `getLiveMarketData` exists and supports BTC/ETH/XRP via a mapping, but it does not clearly reuse a shared URL-building function as specified. Profile methods remain present with the same signatures in the diff.",
+  "generatedAt": "2026-02-07T14:25:07.635Z",
+  "summary": "The diff adds a new CoinGecko debug testing doc stub and updates repository meta/summaries, but it does not provide evidence of the required backend Motoko changes (admin-only debugFetchCoinGecko, shared URL builder usage in getLiveMarketData). The new documentation file is truncated, so the required exact dfx commands cannot be verified from the provided diff summary.",
   "missing_requirements": [
     {
-      "id": "REQ-1",
-      "requirement": "`debugFetchCoinGecko(symbol : CryptoSymbol) : async Text` must build the CoinGecko URL via the URL-builder, perform the HTTP GET outcall, print logs starting with `Fetching:` and `Raw response:`, and if URL cannot be built return exactly `Error: Could not build URL`.",
-      "reason": "The implemented debug endpoint takes `symbol : Text` (not `CryptoSymbol`), prints different log prefixes, and returns a different error string when the symbol/URL cannot be built.",
+      "id": "REQ-6",
+      "requirement": "Backend exposes an admin-only debugFetchCoinGecko(symbol : CryptoSymbol) : async Text that returns raw CoinGecko response for BTC/ETH/XRP and returns exactly \"❌ Error: Could not build URL for symbol: \" # symbol when URL cannot be built.",
+      "reason": "No diff evidence shows any changes to backend/main.mo or the addition of debugFetchCoinGecko or admin-only gating behavior.",
       "evidence": [
-        "backend/main.mo: `public shared ({ caller }) func debugFetchCoinGecko(symbol : Text) : async Text`",
-        "backend/main.mo: `Debug.print(\"[DEBUG] Performing HTTP debug GET request to: \" # url);` (does not start with `Fetching:`)",
-        "backend/main.mo: `Debug.print(\"[DEBUG] Raw HTTP response from URL: \" # url # \"\\n\" # response);` (does not start with `Raw response:`)",
-        "backend/main.mo: unsupported symbol path returns `\"Unsupported symbol: \" # symbol # \". Use BTC, ETH, or XRP.\"` not `Error: Could not build URL`"
+        "File diff summary lists no backend/main.mo modifications"
       ]
     },
     {
-      "id": "REQ-2",
-      "requirement": "`getLiveMarketData(symbol : CryptoSymbol)` must use the same CoinGecko URL-building logic as `debugFetchCoinGecko` (shared URL-building) so failures can be debugged consistently.",
-      "reason": "Both methods construct a similar URL string, but there is no shared `buildCoinGeckoUrl(symbol)` (or equivalent) used by both; each constructs the URL inline after `mapToApiId`.",
+      "id": "REQ-7",
+      "requirement": "Refactor getLiveMarketData(symbol : CryptoSymbol) to use the same buildCoinGeckoUrl(symbol) logic as debugFetchCoinGecko, with deterministic unsupported-symbol handling (clear English error, no traps).",
+      "reason": "No diff evidence shows any backend/main.mo changes to refactor getLiveMarketData or introduce/align buildCoinGeckoUrl usage.",
       "evidence": [
-        "backend/main.mo: `let url = \"https://api.coingecko.com/api/v3/simple/price?ids=\" # apiId # \"&vs_currencies=usd\";` appears separately in `getLiveMarketData` and `debugFetchCoinGecko`",
-        "backend/main.mo: no `buildCoinGeckoUrl` function present; only `mapToApiId`"
+        "File diff summary lists no backend/main.mo modifications"
+      ]
+    },
+    {
+      "id": "REQ-8",
+      "requirement": "Add developer-facing documentation containing the exact deploy and dfx canister call commands for BTC/ETH/XRP using canister name itsron_crypto_backend.",
+      "reason": "A documentation file was added, but its content is truncated and does not show the required exact deploy command or the three exact dfx canister call examples as specified.",
+      "evidence": [
+        "frontend/docs/coingecko-debug-dfx.md (truncated after 'Deploy the backend canister:')"
       ]
     }
   ],
   "hallucinated_features": [
     {
-      "description": "Restricting `debugFetchCoinGecko` to admins only (access control check for `#admin`).",
-      "reason": "The BuildRequest did not request new admin-only restrictions for the debug endpoint; it only specified adding the endpoint and its behavior/logging/error text.",
+      "description": "Repository/project tracking metadata updated (project_state.json feature request entries/status).",
+      "reason": "The BuildRequest does not request updating project_state.json or adding/updating internal project tracking items.",
       "evidence": [
-        "backend/main.mo: `if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) { Runtime.trap(\"Unauthorized: Only admins can use debug endpoints\"); };`"
+        "project_state.json (modified, truncated)"
       ]
     },
     {
-      "description": "Changing/adding user-facing error messages for unsupported symbols instead of returning the specified `Error: Could not build URL`.",
-      "reason": "REQ-1 requires an exact error text when URL cannot be built; the diff introduces different messages and also introduces an \"Unsupported symbol\" response in `getLiveMarketData`.",
+      "description": "Frontend change summaries updated in frontend-file-summaries.txt describing numerous UI/logic changes.",
+      "reason": "The BuildRequest does not request updating this summary file; additionally it includes descriptions of modifications to frontend areas that are constrained in the BuildRequest (though the diff summary only shows the summary file changed, not the actual frontend code).",
       "evidence": [
-        "backend/main.mo: `return \"Unsupported symbol: \" # symbol # \". Only BTC, ETH, and XRP supported.\";`",
-        "backend/main.mo: `return \"Unsupported symbol: \" # symbol # \". Use BTC, ETH, or XRP.\";`"
-      ]
-    },
-    {
-      "description": "Adding a symbol-to-CoinGecko-id mapping helper `mapToApiId` (BTC/ETH/XRP -> bitcoin/ethereum/ripple).",
-      "reason": "While helpful, the BuildRequest only specified using a URL-building approach and validating symbols; it did not explicitly request introducing this mapping helper as a separate feature.",
-      "evidence": [
-        "backend/main.mo: `func mapToApiId(symbol : Text) : ?Text { ... }`"
+        "frontend-file-summaries.txt (modified, truncated)"
       ]
     }
   ],
-  "confidence": 0.78,
+  "confidence": 0.62,
   "changed_files": [
-    "backend/main.mo",
+    "frontend-file-summaries.txt",
+    "frontend/docs/coingecko-debug-dfx.md",
     "project_state.json"
   ]
 }

@@ -33,22 +33,13 @@ export interface http_request_result {
 export interface _SERVICE {
   '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
-  /**
-   * / Logs outcall params and returns response as-is for debugging.
-   */
-  'debugFetchCoinGecko' : ActorMethod<[string], string>,
+  'debugFetchCoinGecko' : ActorMethod<[CryptoSymbol], string>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
-  /**
-   * / Public endpoint to fetch live market data from CoinGecko using crypto symbol.
-   */
   'getLiveMarketData' : ActorMethod<[CryptoSymbol], string>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
-  /**
-   * / Query transform to forward response unchanged.
-   */
   'transformRaw' : ActorMethod<[TransformationInput], TransformationOutput>,
 }
 export declare const idlService: IDL.ServiceClass;
